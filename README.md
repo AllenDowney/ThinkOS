@@ -4,6 +4,8 @@ A Brief Introduction to Operating Systems
 -----------------------------------------
 by Allen B. Downey
 
+Download this book in PDF and HTML from http://greenteapress.com/thinkos
+
 
 Copyright 2014  Allen B. Downey.
 

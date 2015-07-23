@@ -32,12 +32,14 @@
 \usepackage{setspace}
 \usepackage{hevea}                           
 \usepackage{upquote}
+\usepackage{listings}
+\usepackage{color}
 
 \title{Think OS}
 \author{Allen B. Downey}
 
 \newcommand{\thetitle}{Think OS: A Brief Introduction to Operating Systems}
-\newcommand{\theversion}{0.1}
+\newcommand{\theversion}{0.3.2}
 
 % these styles get translated in CSS for the HTML version
 \newstyle{a:link}{color:black;}
@@ -49,6 +51,14 @@
   {\imgsrc[ALT="Previous"]{back.png}}
   {\imgsrc[ALT="Up"]{up.png}}
   {\imgsrc[ALT="Next"]{next.png}} 
+
+% Commands that control the appearance of the listings
+\definecolor{light-gray}{gray}{0.95}
+
+\lstset{basicstyle=\tt, frame=single, 
+backgroundcolor=\color{light-gray}, escapeinside={(*}{*)},
+numbers=left, numberstyle=\tiny, numbersep=10pt}
+
 
 \makeindex
 
@@ -323,10 +333,20 @@ Thanks!
 
 \begin{itemize}
 
-\item I am grateful to the student in Software Systems at Olin
+\item I am grateful to the students in Software Systems at Olin
 College, who tested an early draft of this book in Spring 2014.
 They corrected many errors and made many helpful suggestions.
 I appreciate their pioneering spirit!
+
+\item Donald Robertson spotted two typos.
+
+\item Jim Tyson sent in two corrections.
+
+\item James P Giannoules spotted a copy-and-paste error.
+
+\item Andy Engle knows the difference between GB and GiB.
+
+\item Aashish Karki noted some broken syntax.
 
 % ENDCONTRIB
 
@@ -656,7 +676,7 @@ of code.
 \section{Understanding errors}
 
 Now that we know the steps in the compilation process, it is easier
-to understand errors messages.  For example, if there is an error
+to understand error messages.  For example, if there is an error
 in a \verb"#include" directive, you'll get a message from the
 preprocessor:
 
@@ -784,16 +804,16 @@ following data:
 \begin{itemize}
 
 \item The text of the program, usually a sequence of
-  machine language instructions,
+  machine language instructions.
 
 \item Data associated with the program, including static data (allocated
   at compile time) and dynamic data including the run-time stack and
-  the heap,
+  the heap.
 
 \item The state of any pending input/output operations.  For example,
   if the process is waiting for data to be read from disk or for a
   packet to arrive on a network, the status of these operations is
-  part of the process, and
+  part of the process.
 
 \item The hardware state of the program, which includes data stored
   in registers, status information, and the program counter, which
@@ -845,6 +865,7 @@ going on, it can make you a better programmer.
 
 
 \section{Unix processes}
+\label{unix_ps}
 
 While I write this book, the process I
 am most aware of is my text editor, emacs.  Every once in a while
@@ -1020,10 +1041,10 @@ units.  In this book I will be careful to distinguish binary and
 decimal units, but you should be aware that the word ``gigabyte'' and the
 abbreviation GB are often used ambiguously.
 
-In casual use, the term ``memory'' is sometimes used for HDDs and SDDs
+In casual use, the term ``memory'' is sometimes used for HDDs and SSDs
 as well as RAM, but the properties of these devices are very
 different, so we will need to distinguish them.  I will use
-``storage'' to refer to HDDs and SDDs.
+``storage'' to refer to HDDs and SSDs.
 
 
 \section{Address spaces}
@@ -1032,7 +1053,7 @@ Each byte in main memory is specified by an integer ``physical
 address.''  The set of valid physical addresses is called the
 physical ``address space.''  It
 usually runs from 0 to $N-1$, where $N$ is
-the size of main memory.  On a system with 1 GB of physical memory,
+the size of main memory.  On a system with 1 GiB of physical memory,
 the highest valid address is $2^{30}-1$, which is 1,073,741,823 in
 decimal, or 0x03ff ffff in hexadecimal (the prefix 0x indicates a
 hexadecimal number).
@@ -1503,7 +1524,7 @@ files, including the location of their blocks, is called ``metadata.''
 data about data, hence ``meta'').
 
 Since inodes reside on disk along with the rest of the data, they
-are designed to fit neatly into disk blocks.  An UNIX inode
+are designed to fit neatly into disk blocks.  A UNIX inode
 contains IDs for the owner of the file and the group associated
 with it, permission flags indicating who is allowed to read, write,
 or execute it, and timestamps that indicate when it was last
@@ -1731,7 +1752,7 @@ C also provides shift operators, {\tt <<} and {\tt >>}, which shift
 bits left and right.  Each left shift doubles a number, so
 {\tt 5 << 1} is 10, and {\tt 5 << 2} is 20.  Each right shift
 divides by two (rounding down), so {\tt 5 >> 1} is 2 and
-{\tt 5 >> 1} is 1.
+{\tt 2 >> 1} is 1.
 
 
 \section{Representing floating-point numbers}
@@ -1885,7 +1906,7 @@ If I call {\tt f1} and then {\tt f2}, I get these results:
 
 The details here depend on the compiler, which arranges variables
 on the stack.  From these results, we can infer that the
-compile put {\tt x} and {\tt y} next to each other, ``below''
+compiler put {\tt x} and {\tt y} next to each other, ``below''
 the array (at a lower address).  And when we read past the
 array, it looks like we are getting values that were left on
 the stack by the previous function call.
@@ -1923,7 +1944,7 @@ through 9 are special characters used in some communication protocols.
 ASCII code 7 is a bell; on some terminals, printing it makes a sound.
 
 The ASCII code for the letter ``A'' is 65; the code for
-``a'' is 97.  here are those codes in binary:
+``a'' is 97.  Here are those codes in binary:
 
 \begin{Verbatim}
 65 = b0100 0001
@@ -2039,7 +2060,7 @@ of the documented interface, information about how that memory should
 be freed.  Mature libraries often do this well, but in the real world,
 software engineering practice often falls short of this ideal.
 
-To make matters worse, memory errors can be extremely difficult
+To make matters worse, memory errors can be difficult
 to find because the symptoms are unpredictable.  For example:
 
 \begin{itemize}
@@ -2481,10 +2502,10 @@ sec * 1e9 / iters / limit * stride
 If you compile and run {\tt cache.c} you should see output like this:
 
 \begin{Verbatim}
-Size:    4096 Stride:       8 read+write: 1.1699 ns
+Size:    4096 Stride:       8 read+write: 0.8633 ns
 Size:    4096 Stride:      16 read+write: 0.7023 ns
 Size:    4096 Stride:      32 read+write: 0.7105 ns
-Size:    4096 Stride:      64 read+write: 0.6858 ns
+Size:    4096 Stride:      64 read+write: 0.7058 ns
 \end{Verbatim}
 
 If you have Python and {\tt matplotlib} installed, you can use
@@ -2503,8 +2524,8 @@ about the cache.  Here are some things to think about:
   the average miss penalty to be near 0.
 
 \item When the stride is 4 bytes, we read every element of the array,
-  so the program has plenty of spatial locality.  For example, if the
-  block size is big enough to contain 64 elements, the hit rate would
+  so the program has plenty of spatial locality.  If the block size is
+  big enough to contain 64 elements, for example, the hit rate would
   be 63/64, even if the array does not fit in cache.
 
 \item If the stride is equal to the block size (or greater), the
@@ -2515,7 +2536,7 @@ about the cache.  Here are some things to think about:
 \end{itemize}
 
 In summary, we expect good cache performance if the array is smaller
-than the case size {\em or} if the stride is smaller than the block
+than the cache size {\em or} if the stride is smaller than the block
 size.  Performance only degrades if the array is bigger than the
 cache {\em and} the stride is large.
 
@@ -2548,13 +2569,13 @@ each element, rather than traversing the array several times.
 If you are working with a 2-D array, it might be stored as an array
 of rows.  If you traverse through the elements, it would be faster
 to go row-wise, so the effective stride is 1 element, rather
-than column-size, with a stride equal to the row length.
+than column-wise, with a stride equal to the row length.
 
 Linked data structures don't always exhibit spatial locality, because
-the nodes aren't necessarily contiguous in memory.
-But you allocate many nodes at the same time, they
-are usually co-located in the heap.  Or, even better, if you can
-allocate an array of nodes, you know they will be contiguous.
+the nodes aren't necessarily contiguous in memory.  But you allocate
+many nodes at the same time, they are usually co-located in the heap.
+Or, even better, if you allocate an array of nodes all at once, you
+know they will be contiguous.
 
 Recursive strategies like mergesort often have good cache behavior
 because they break big arrays into smaller pieces and then work
@@ -2615,7 +2636,7 @@ cost for each of these technologies:
     DRAM     &   10 ns    &   4 GiB      &   \$10 / GiB       \\ \hline
     SSD      &   10 \mus  &   100 GiB    &   \$1 / GiB      \\ \hline
     HDD      &   5 ms     &   500 GiB    &   \$0.25 / GiB     \\ \hline
-    Tape     &   0.5 ns   &   1--2 TiB   &   \$20 / TiB      \\ \hline
+    Tape     &   minutes  &   1--2 TiB   &   \$0.02 / GiB      \\ \hline
     \end{tabular}
 \end{center}
 \vspace{0.1in}
@@ -2702,10 +2723,10 @@ has not been used recently.  For more on this topic, see
 \chapter{Multitasking}
 
 In many current systems, the CPU contains multiple cores, which means
-it can run several processes at the same time.  In addition, each
-core is capable of {\bf multitasking}, which means it can switch from one
-process to another quickly, creating the illusion that many
-processes are running at the same time.
+it can run several processes at the same time.  In addition, each core
+is capable of {\bf multitasking}, which means it can switch from one
+process to another quickly, creating the illusion that many processes
+are running at the same time.
 
 The part of the operating system that implements multitasking is
 the {\bf kernel}.  In a nut or seed, the kernel is the innermost
@@ -2714,8 +2735,8 @@ is the lowest level of software, surrounded by several other
 layers, including an interface called a ``shell.''  Computer
 scientists love extended metaphors.
 
-It's hard to define precisely which parts of the operating system are
-part of the kernel.  But at its most basic, the kernel's job is to
+It's hard to specify which parts of the operating system should be
+in the kernel.  But at its most basic, the kernel's job is to
 handle interrupts.  An {\bf interrupt} is an event that stops the
 normal instruction cycle and causes the flow of execution to jump to a
 special section of code called an {\bf interrupt handler}.
@@ -2723,16 +2744,16 @@ special section of code called an {\bf interrupt handler}.
 A hardware interrupt is caused when a device sends a signal to the
 CPU.  For example, a network interface might cause an interrupt when
 a packet of data arrives, or a disk drive might cause an interrupt
-when a data transfer is complete.  Many systems also have timers that
-cause interrupts at regular intevals.
+when a data transfer is complete.  Most systems also have timers that
+cause interrupts at regular intervals.
 
-A software interrupt is caused by a running program.  For example,
-if a computation cannot execute in hardware, it might trigger an
-interrupt so the condition can be handled in software.  Some
-floating-point errors, like division by zero, can be handled using
-interrupts.
+A software interrupt is caused by a running program.  For example, if
+an instruction cannot complete for some reason, it might trigger an
+interrupt so the condition can be handled by the operating system.
+Some floating-point errors, like division by zero, can be handled
+using interrupts.
 
-Also, when a program needs to access a hardware device,
+When a program needs to access a hardware device,
 it makes a {\bf system call}, which is similar to a function call,
 except that instead of jumping to the beginning of the function,
 it executes a special instruction that triggers an interrupt, causing
@@ -2745,7 +2766,7 @@ and then resumes the interrupted process.
 
 Handling interrupts requires cooperation between hardware and
 software.  When an interrupt occurs, there might be several
-instructions running on the CPU, and data stored in registers.
+instructions running on the CPU and data stored in registers.
 
 Usually the hardware is responsible for bringing the CPU
 to a consistent state; for example, every instruction should either
@@ -2756,8 +2777,10 @@ resume.
 
 Then, usually, it is the responsibility of the interrupt handler
 to save the contents of the registers.  In order to do its job, the
-kernel needs to run code, which modifies data registers and 
-the flag register.  So this {\bf hardware state} needs to be saved.
+kernel needs to execute instructions, which modify data registers and 
+the flag register.  So this {\bf hardware state} needs to be saved
+before it gets modified, and then restored before the interrupted
+process resumes.
 
 Here is an outline of this sequence of events:
 
@@ -2765,9 +2788,9 @@ Here is an outline of this sequence of events:
 
 \item When the interrupt occurs, the hardware saves the program
 counter in a special register and jumps to the appropriate interrupt
-handlers.
+handler.
 
-\item The interrupt handlers stores the program counter and the
+\item The interrupt handler stores the program counter and the
 flag register in memory, along with the contents of any data
 registers it plans to use.
 
@@ -2782,7 +2805,7 @@ has the effect of jumping back to the interrupted instruction.
 
 If this mechanism works correctly, there is generally no way for
 the interrupted process to know there was an interruption, unless
-it can detect small changes in the time between instructions.
+it detects small changes in the time between instructions.
 
 
 \section{Context switching}
@@ -2797,15 +2820,16 @@ process.  This mechanism is called a {\bf context switch}.
 
 In general, the kernel does not know which registers a process will
 use, so it has to save all of them.  Also, when it switches to a new
-process, it might have to clear data stored in the MMU (see
+process, it might have to clear data stored in the memory management
+unit (see
 Section~\ref{address_transaltion}).  And after the context switch, it
-might take some time to reload data into the cache.  For these reasons,
-context switches are relatively slow, on the order of thousands of
-cycles, or a few milliseconds.
+might take some time for the new process to load data into the cache.
+For these reasons, context switches are relatively slow, on the order
+of thousands of cycles, or a few microseconds.
 
 In a multi-tasking system, each process is allowed to run for a short
 period of time called a {\bf time slice} or {\bf quantum}.  During
-the context switch, the kernel sets a hardware timer that causes
+a context switch, the kernel sets a hardware timer that causes
 an interrupt at the end of the time slice.  When the interrupt
 occurs, the kernel can switch to another process or allow the
 interrupted process to resume.  The part of the operating system
@@ -2825,7 +2849,7 @@ PCB keeps track of the process state, which is one of:
 \item Running, if the process is currently running on a core.
 
 \item Ready, if the process could be running, but isn't, usually because
-there are more ready processes than cores.
+there are more runnable processes than cores.
 
 \item Blocked, if the process cannot run because it is waiting for
 a future event like network communication or a disk read.
@@ -2841,15 +2865,17 @@ one state to another:
 \begin{itemize}
 
 \item A process is created when the running program executes a system
-call.  At the end of the system call, the new process is usually
-ready.  Then the scheduler might resume the original process
-(the ``parent'') or start the new process (the ``child'').
+  call like {\tt fork}.  At the end of the system call, the new
+  process is usually ready.  Then the scheduler might resume the
+  original process (the ``parent'') or start the new process (the
+  ``child'').
 
-\item When the scheduler starts a process, it switches the state
-from ready to running.
+\item When a process is started or resumed by the scheduler, its state
+  changes from ready to running.
 
-\item When the scheduler chooses not to resume a running process,
-it switches to ready.
+\item When a process is interrupted and the schedule chooses not
+  to let it resume, its state
+  changes from running to ready.
 
 \item If a process executes a system call that cannot complete
   immediately, like a disk request, it becomes blocked
@@ -2857,22 +2883,22 @@ it switches to ready.
 
 \item When an operation like a disk request completes, it causes an
   interrupt.  The interrupt handler figures out which process was
-  waiting for the operating to complete and switches the state from
-  blocked to ready, or possibly running.
+  waiting for the request and switches its state from
+  blocked to ready.
 
-\item When a process completes, its exit code is stored in the
-  PCB and its state switches to done.
+\item When a process calls {\tt exit}, the interrupt handler stores
+  the exit code in the PCB and changes the process's state to done.
 
 \end{itemize}
 
 
 \section{Scheduling}
 
-As we saw in Section~\ref{} there might be hundreds of processes on a
-computer, but usually most of them are blocked.  Most of the time,
-there are only a few processes that are ready or running.  When an
-interrupt occurs, the scheduler decides which process to start or
-resume.
+As we saw in Section~\ref{unix_ps} there might be hundreds of
+processes on a computer, but usually most of them are blocked.  Most
+of the time, there are only a few processes that are ready or running.
+When an interrupt occurs, the scheduler decides which process to start
+or resume.
 
 On a workstation or laptop, the primary goal of the scheduler is to
 minimize response time; that is, the computer should respond quickly
@@ -2880,8 +2906,8 @@ to user actions.  Response time is also important on a server, but in
 addition the scheduler might try to maximize throughput, which is the
 number of requests that complete per unit of time.
 
-In general the scheduler doesn't have much information about what
-processes are doing, so its decisions are usually based on a few
+Usually the scheduler doesn't have much information about what
+processes are doing, so its decisions are based on a few
 heuristics:
 
 \begin{itemize}
@@ -2919,8 +2945,7 @@ process takes 55 minutes.
 Most schedulers use some form of priority-based scheduling,
 where each process has a priority that can be adjusted up or down
 over time.  When the scheduler runs, it chooses the runnable process
-with the highest priority, or at least it is more likely to choose
-a process with high priority.
+with the highest priority.
 
 Here are some of the factors that determine a process's priority:
 
@@ -2990,9 +3015,645 @@ guarantees a maximum completion time.
 \end{itemize}
 
 For more demanding applications, especially in domains where real-time
-response is a matter of life and death, {\bf
-  real-time operating systems} provide specialized capabilities,
-often with much simpler designs than general purpose operating systems.
+response is a matter of life and death, {\bf real-time operating
+  systems} provide specialized capabilities, often with much simpler
+designs than general purpose operating systems.
+
+%TODO: kernel mode?  signals?  user and system time
+
+
+\chapter{Cleaning up POSIX threads}
+\label{ccleanup}
+
+In this section, I present some utility code I use to make
+multithreading in C a little more pleasant.  The examples in
+Section~\ref{csync} are based on this code.
+
+Probably the most popular threading standard used with C is
+POSIX Threads, or Pthreads for short.  The POSIX standard defines
+a thread model and an interface for creating and controlling
+threads.  Most versions of UNIX provide an implementation of
+Pthreads.
+
+\section{Compiling Pthread code}
+
+Using Pthreads is like using most C libraries:
+
+\begin{itemize}
+
+\item You include headers files at the beginning of your
+program.
+
+\item You write code that calls functions defined by Pthreads.
+
+\item When you compile the program, you link it with the
+Pthread library.
+
+\end{itemize}
+
+For my examples, I include the following headers:
+
+\begin{Verbatim}
+#include <stdio.h>
+#include <stdlib.h>
+#include <pthread.h>
+#include <semaphore.h>
+\end{Verbatim}
+
+The first two are standard; the third is for Pthreads and
+the fourth is for semaphores.
+To compile with the Pthread library in {\tt gcc}, you
+can use the {\tt -l}
+option on the command line:
+
+\begin{Verbatim}
+gcc -g -O2 -o array array.c -lpthread
+\end{Verbatim}
+
+This compiles {\tt array.c} with debugging info and optimization,
+links with the Pthread library, and generates an executable
+named {\tt array}.
+
+If you are used to a language like Python that provides exception
+handling, you will probably be annoyed with languages like C that
+require you to check for error conditions explicitly.  I often
+mitigate this hassle by wrapping library function calls
+together with their error-checking code inside my own functions.
+For example, here is a version of {\tt malloc}
+that checks the return value.
+
+\begin{Verbatim}
+void *check_malloc(int size)
+{
+  void *p = malloc (size);
+  if (p == NULL) {
+    perror ("malloc failed");
+    exit (-1);
+  }
+  return p;
+}
+\end{Verbatim}
+
+
+\section{Creating threads}
+
+I've done the same thing with the Pthread functions I'm going to use;
+here's my wrapper for {\tt pthread\_create}.
+
+\begin{Verbatim}
+pthread_t make_thread(void *(*entry)(void *), Shared *shared)
+{
+  int n;
+  pthread_t thread;
+
+  n = pthread_create (&thread, NULL, entry, (void *)shared);
+  if (n != 0) {
+    perror ("pthread_create failed");
+    exit (-1);
+  }
+  return thread;
+}
+\end{Verbatim}
+
+The return type from {\tt pthread\_create} is {\tt pthread\_t},
+which you can think of as a handle for the new thread.  You
+shouldn't have to worry about the implementation of {\tt pthread\_t},
+but you do have to know that it has the semantics of a primitive
+type\footnote{Like an integer, for example, which is what a
+{\tt pthread\_t} is in all the implementations I know.}.  
+You can think of a thread handle as an immutable
+value, so you can copy it or pass it by value without causing
+problems.  I point this out now because it is not true for
+semaphores, which I will get to in a minute.
+
+If {\tt pthread\_create} succeeds, it returns 0 and my function
+returns the handle of the new thread.
+If an error occurs, {\tt pthread\_create} 
+returns an error code and my function prints an error message
+and exits.
+
+The parameters of {\tt pthread\_create} take some
+explaining.  Starting with the second,
+{\tt Shared}
+is a user-defined structure that contains shared variables.
+The following {\tt typedef} statement creates the new type:
+
+\begin{Verbatim}
+typedef struct {
+  int counter;
+} Shared;
+\end{Verbatim}
+
+In this case, the only shared variable is {\tt counter}.
+{\tt make\_shared} allocates
+space for a {\tt Shared} structure and initializes the contents:
+
+\begin{Verbatim}
+Shared *make_shared ()
+{
+  int i;
+  Shared *shared = check_malloc (sizeof (Shared));
+  shared->counter = 0;
+  return shared;
+}
+\end{Verbatim}
+
+Now that we have a shared data structure, let's get back to
+{\tt pthread\_create}.
+The first parameter is a pointer to a function that takes
+a {\tt void} pointer and returns a {\tt void} pointer.  If the syntax
+for declaring this type makes your eyes bleed, you are not alone.
+Anyway, the purpose of this parameter is to specify the function where
+the execution of the new thread will begin.  By convention, this
+function is named {\tt entry}:
+
+\begin{Verbatim}
+void *entry (void *arg)
+{
+  Shared *shared = (Shared *) arg;
+  child_code (shared);
+  pthread_exit (NULL);
+}
+\end{Verbatim}
+
+The parameter of {\tt entry} has to be declared as a {\tt void}
+pointer, but in this program we know that it is really a pointer to a
+{\tt Shared} structure, so we can typecast it accordingly and then
+pass it along to {\tt child\_code}, which does the real work.
+
+When {\tt child\_code} returns, we invoke {\tt pthread\_exit}
+which can be used to pass a value to any thread (usually the
+parent) that joins with this thread.  In this case, the child
+has nothing to say, so we pass {\tt NULL}.
+
+
+\section{Joining threads}
+
+When one thread wants to wait for another thread to complete,
+it invokes {\tt pthread\_join}.
+Here is my wrapper for {\tt pthread\_join}:
+
+\begin{Verbatim}
+void join_thread (pthread_t thread)
+{
+  int ret = pthread_join (thread, NULL);
+  if (ret == -1) {
+    perror ("pthread_join failed");
+    exit (-1);
+  }
+}
+\end{Verbatim}
+
+The parameter is the handle of the thread you want to wait for.
+All my function does is call {\tt pthread\_join} and check the
+result.
+
+
+\section{Semaphores}
+
+The POSIX standard specifies an interface for semaphores.
+This interface is not part of Pthreads, but most UNIXes
+that implement Pthreads also provide semaphores.  If you
+find yourself with Pthreads and without semaphores, you
+can make your own; see Section~\ref{makeyourown}.
+
+POSIX semaphores have type {\tt sem\_t}.  You shouldn't have
+to know about the implementation of this type, but you do
+have to know that it has structure semantics, which means that
+if you assign it to a variable you are making a copy of the
+contents of a structure.  Copying a semaphore is almost certainly
+a bad idea.  In POSIX, the behavior of the copy is undefined.
+
+In my programs, I use capital letters to denote types with
+structure semantics, and I always manipulate them with pointers.
+Fortunately, it is easy to put a wrapper around {\tt sem\_t}
+to make it behave like a proper object.  Here is the 
+{\tt typedef} and the wrapper that creates and initializes
+semaphores:
+
+\begin{Verbatim}
+typedef sem_t Semaphore;
+
+Semaphore *make_semaphore (int n)
+{
+  Semaphore *sem = check_malloc (sizeof(Semaphore));
+  int ret = sem_init(sem, 0, n);
+  if (ret == -1) {
+    perror ("sem_init failed");
+    exit (-1);    
+  }
+  return sem;
+}
+\end{Verbatim}
+
+{\tt make\_semaphore} takes the initial value of the semaphore
+as a parameter.  It allocates space for a Semaphore, initializes
+it, and returns a pointer to {\tt Semaphore}.
+
+{\tt sem\_init} uses old-style UNIX error reporting, which means
+that it returns $-1$ if something went wrong.  One nice thing
+about these wrapper functions is that we don't have to remember
+which functions use which reporting style.
+
+With these definitions, we can write C code that almost looks
+like a real programming language:
+
+\begin{Verbatim}
+Semaphore *mutex = make_semaphore(1);
+sem_wait(mutex);
+sem_post(mutex);
+\end{Verbatim}
+
+%TODO: why is this annoying?
+
+Annoyingly, POSIX semaphores use {\tt post} instead of
+{\tt signal}, but we can fix that:
+
+\begin{Verbatim}
+int sem_signal(Semaphore *sem)
+{
+  return sem_post(sem);
+}
+\end{Verbatim}
+
+That's enough cleanup for now.
+
+
+\chapter{Synchronization in C}
+\label{csync}
+
+\section{Mutual exclusion}
+
+In this section we will write a multithreaded, synchronized
+program in C.
+We'll start by defining a structure that contains shared
+variables:
+
+\begin{Verbatim}
+typedef struct {
+  int counter;
+  int end;
+  int *array;
+} Shared;
+
+Shared *make_shared (int end)
+{
+  int i;
+  Shared *shared = check_malloc (sizeof (Shared));
+
+  shared->counter = 0;
+  shared->end = end;
+
+  shared->array = check_malloc (shared->end * sizeof(int));
+  for (i=0; i<shared->end; i++) {
+    shared->array[i] = 0;
+  }
+  return shared;
+}
+\end{Verbatim}
+
+{\tt counter} is a shared variable that will be incremented by
+concurrent threads until it reaches {\tt end}.  We will use
+{\tt array} to check for synchronization errors by keeping track
+of the value of {\tt counter} after each increment.
+
+\subsection{Parent code}
+
+Here is the code the parent thread uses to create threads
+and wait for them to complete:
+
+\begin{Verbatim}
+int main ()
+{
+  int i;
+  pthread_t child[NUM_CHILDREN];
+
+  Shared *shared = make_shared (100000);
+
+  for (i=0; i<NUM_CHILDREN; i++) {
+    child[i] = make_thread (entry, shared);
+  }
+
+  for (i=0; i<NUM_CHILDREN; i++) {
+    join_thread (child[i]);
+  }
+
+  check_array (shared);
+  return 0;
+}
+\end{Verbatim}
+
+The first loop creates the child threads; the second loop waits
+for them to complete.  When the last child has finished, the parent
+invokes {\tt check\_array} to check for errors.
+{\tt make\_thread} and {\tt join\_thread} are defined in
+Appendix~\ref{ccleanup}.
+
+\subsection{Child code}
+
+Here is the code that is executed by each of the children:
+
+\begin{Verbatim}
+void child_code (Shared *shared)
+{
+  while (1) {
+    if (shared->counter >= shared->end) {
+      return;
+    }
+    shared->array[shared->counter]++;
+    shared->counter++;
+  }
+}
+\end{Verbatim}
+
+Each time through the loop, the child threads use {\tt counter}
+as an index into {\tt array} and increment the corresponding element.
+Then they increment {\tt counter} and check to see if they're done.
+
+\subsection{Synchronization errors}
+
+If everything works correctly, each element of the array should be
+incremented once.  So to check for errors, we can just count the
+number of elements that are not 1:
+
+\begin{Verbatim}
+void check_array (Shared *shared)
+{
+  int i, errors=0;
+
+  for (i=0; i<shared->end; i++) {
+    if (shared->array[i] != 1) errors++;
+  }
+  printf ("%d errors.\n", errors);
+}
+\end{Verbatim}
+
+You can download this program (including the cleanup code) from
+\url{greenteapress.com/semaphores/counter.c}
+
+If you compile and run the program, you should see output like this:
+
+\begin{verbatim}
+Starting child at counter 0
+10000
+20000
+30000
+40000
+50000
+60000
+70000
+80000
+90000
+Child done.
+Starting child at counter 100000
+Child done.
+Checking...
+0 errors.
+\end{verbatim}
+
+Of course, the interaction of the children depends on details
+of your operating system and also other programs running on your
+computer.  In the example shown here, one thread ran all the way
+from 0 to {\tt end} before the other thread got started, so it is
+not surprising that there were no synchronization errors.
+
+But as {\tt end} gets bigger, there are more context switches between
+the children.  On my system I start to see errors when
+{\tt end} is 100,000,000.
+
+Puzzle: use semaphores to enforce exclusive access to the shared
+variables and run the program again to confirm that there are
+no errors.
+
+\clearemptydoublepage
+\subsection{Mutual exclusion hint}
+
+Here is the version of {\tt Shared} I used in my solution:
+
+\begin{Verbatim}
+typedef struct {
+  int counter;
+  int end;
+  int *array;
+  Semaphore *mutex;  (*\label{declaremutex}*)
+} Shared;
+
+Shared *make_shared (int end)
+{
+  int i;
+  Shared *shared = check_malloc (sizeof (Shared));
+
+  shared->counter = 0;
+  shared->end = end;
+
+  shared->array = check_malloc (shared->end * sizeof(int));
+  for (i=0; i<shared->end; i++) {
+    shared->array[i] = 0;
+  }
+  shared->mutex = make_semaphore(1);  (*\label{initmutex}*)
+  return shared;
+}
+\end{Verbatim}
+
+Line~\ref{declaremutex} declares {\tt mutex} as a Semaphore;
+Line~\ref{initmutex} initializes the mutex with the value 1.
+
+
+\clearemptydoublepage
+\subsection{Mutual exclusion solution}
+
+Here is the synchronized version of the child code:
+
+\begin{Verbatim}
+void child_code (Shared *shared)
+{
+  while (1) {
+    sem_wait(shared->mutex);
+    if (shared->counter >= shared->end) {
+      sem_signal(shared->mutex);
+      return;
+    }
+
+    shared->array[shared->counter]++;
+    shared->counter++;
+    sem_signal(shared->mutex);
+  }
+}
+\end{Verbatim}
+
+There is nothing too surprising here; the only tricky thing
+is to remember to release the mutex before the {\tt return}
+statement.
+
+You can download this solution from 
+\url{greenteapress.com/semaphores/counter_mutex.c}
+
+
+\clearemptydoublepage
+\section{Make your own semaphores}
+\label{makeyourown}
+
+The most commonly used synchronization tools for programs that use
+Pthreads are mutexes and condition variables, not semaphores.  For an
+explanation of these tools, I recommend Butenhof's {\em Programming
+with POSIX Threads} \cite{butenhof}.
+
+Puzzle: read about mutexes and condition variables, and then
+use them to write an implementation of semaphores.
+
+You might want to use the following utility code in your solutions.
+Here is my wrapper for Pthreads mutexes:
+
+\begin{Verbatim}
+typedef pthread_mutex_t Mutex;
+
+Mutex *make_mutex ()
+{
+  Mutex *mutex = check_malloc (sizeof(Mutex));
+  int n = pthread_mutex_init (mutex, NULL);
+  if (n != 0) perror_exit ("make_lock failed"); 
+  return mutex;
+}
+
+void mutex_lock (Mutex *mutex)
+{
+  int n = pthread_mutex_lock (mutex);
+  if (n != 0) perror_exit ("lock failed");
+}
+
+void mutex_unlock (Mutex *mutex)
+{
+  int n = pthread_mutex_unlock (mutex);
+  if (n != 0) perror_exit ("unlock failed");
+}
+\end{Verbatim}
+
+\newpage
+And my wrapper for Pthread condition variables:
+
+\begin{Verbatim}
+typedef pthread_cond_t Cond;
+
+Cond *make_cond ()
+{
+  Cond *cond = check_malloc (sizeof(Cond)); 
+  int n = pthread_cond_init (cond, NULL);
+  if (n != 0) perror_exit ("make_cond failed");
+  return cond;
+}
+
+void cond_wait (Cond *cond, Mutex *mutex)
+{
+  int n = pthread_cond_wait (cond, mutex);
+  if (n != 0) perror_exit ("cond_wait failed");
+}
+
+void cond_signal (Cond *cond)
+{
+  int n = pthread_cond_signal (cond);
+  if (n != 0) perror_exit ("cond_signal failed");
+}
+\end{Verbatim}
+
+
+
+\clearemptydoublepage
+\subsection{Semaphore implementation hint}
+
+Here is the structure definition I used for my semaphores:
+
+\begin{Verbatim}
+typedef struct {
+  int value, wakeups;
+  Mutex *mutex;
+  Cond *cond;
+} Semaphore;
+\end{Verbatim}
+
+{\tt value} is the value of the semaphore.  {\tt wakeups} counts
+the number of pending signals; that is, the number of threads
+that have been woken but have not yet resumed execution.  The reason
+for wakeups is to make sure that our semaphores have
+Property 3, described in Section~\ref{props}.
+
+{\tt mutex} provides exclusive access to {\tt value} and
+{\tt wakeups}; {\tt cond} is the condition variable threads
+wait on if they wait on the semaphore.
+
+Here is the initialization code for this structure:
+
+\begin{Verbatim}
+Semaphore *make_semaphore (int value)
+{
+  Semaphore *semaphore = check_malloc (sizeof(Semaphore));
+  semaphore->value = value;
+  semaphore->wakeups = 0;
+  semaphore->mutex = make_mutex ();
+  semaphore->cond = make_cond ();
+  return semaphore;
+}
+\end{Verbatim}
+
+
+\clearemptydoublepage
+\subsection{Semaphore implementation}
+
+Here is my implementation of semaphores using Pthread's mutexes
+and condition variables:
+
+\begin{Verbatim}
+void sem_wait (Semaphore *semaphore)
+{
+  mutex_lock (semaphore->mutex);
+  semaphore->value--;
+
+  if (semaphore->value < 0) {
+    do {                       
+      cond_wait (semaphore->cond, semaphore->mutex);
+    } while (semaphore->wakeups < 1);
+    semaphore->wakeups--;
+  }
+  mutex_unlock (semaphore->mutex);
+}
+
+void sem_signal (Semaphore *semaphore)
+{
+  mutex_lock (semaphore->mutex);
+  semaphore->value++;
+
+  if (semaphore->value <= 0) {
+    semaphore->wakeups++;
+    cond_signal (semaphore->cond);
+  }
+  mutex_unlock (semaphore->mutex);
+}
+\end{Verbatim}
+
+Most of this is straightforward; the only thing that might be 
+tricky is the {\tt do...while} loop at Line~\ref{dowhile}.
+This is an unusual way to use a condition variable, but in
+this case it is necessary.
+
+Puzzle: why can't we replace this {\tt do...while} loop
+with a {\tt while} loop?
+
+\clearemptydoublepage
+\subsection{Semaphore implementation detail}
+
+With a {\tt while} loop, this implementation would not have
+Property 3.  It would be possible for a thread to signal
+and then run around and catch its own signal.
+
+With the {\tt do...while} loop, it is guaranteed\footnote{Well,
+  almost.  It turns out that a well-timed spurious wakeup (see
+  \url{http://en.wikipedia.org/wiki/Spurious_wakeup}) can violate this
+  guarantee.} that when a thread signals, one of the waiting threads
+will get the signal, even if another thread gets the mutex at
+Line~\ref{sementer} before one of the waiting threads resumes.
+
+
+
+
 
 \end{document}
 

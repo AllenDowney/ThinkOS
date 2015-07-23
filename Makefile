@@ -37,7 +37,7 @@ DEST = /home/downey/public_html/greent/thinkos
 distrib:
 	rm -rf dist
 	mkdir dist dist/tex dist/tex/figs
-	rsync -a thinkos.pdf html cover_nolines.png dist
+	rsync -a thinkos.pdf html dist
 	rsync -a Makefile book.tex latexonly htmlonly dist/tex
 	# rsync -a figs/*.fig figs/*.eps dist/tex/figs
 	cd dist; zip -r thinkos.tex.zip tex

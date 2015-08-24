@@ -1,6 +1,6 @@
 % LaTeX source for ``Think OS:
 % A Brief Introduction to Operating Systems''
-% Copyright 2014  Allen B. Downey.
+% Copyright 2015  Allen B. Downey.
 
 % License: Creative Commons Attribution-NonCommercial 3.0 Unported License.
 % http://creativecommons.org/licenses/by-nc/3.0/
@@ -39,7 +39,7 @@
 \author{Allen B. Downey}
 
 \newcommand{\thetitle}{Think OS: A Brief Introduction to Operating Systems}
-\newcommand{\theversion}{0.4.2}
+\newcommand{\theversion}{0.4.3}
 
 % these styles get translated in CSS for the HTML version
 \newstyle{a:link}{color:black;}
@@ -170,7 +170,7 @@ Allen B. Downey\\
 \thispagestyle{empty}
 
 {\small
-Copyright \copyright ~2014 Allen B. Downey.
+Copyright \copyright ~2015 Allen B. Downey.
 
 
 \vspace{0.2in}
@@ -3448,8 +3448,8 @@ going on?
 \section{Synchronization errors}
 
 The problem with the previous program is that the children
-access the shared variable, {\tt counter}, without synchronization.
-So several threads can read the same value of {\tt counter} before
+access the shared variable, {\tt counter}, without synchronization,
+so several threads can read the same value of {\tt counter} before
 any threads increment it.
 
 Here is a sequence of events that could explain the output in the
@@ -3506,11 +3506,12 @@ void child_code(Shared *shared)
 
 Before any thread can access {\tt counter}, it has to ``lock''
 the mutex, which has the effect of barring all other threads.
-If another thread executes \verb"mutex_lock" which another thread
-is in the middle of \verb"child_code", it blocks.
+Suppose Thread A has locked the mutex and is in the
+middle of \verb"child_code".  If Thread B arrives and
+executes \verb"mutex_lock", it blocks.
 
-When the first thread is done, it executes \verb"mutex_unlock",
-which allows one other thread to proceed.  In effect, the threads
+When Thread A is done, it executes \verb"mutex_unlock",
+which allows Thread B to proceed.  In effect, the threads
 line up to execute \verb"child_code" one at a time, so they
 can't interfere with each other.  When I run this code with
 5 children, I get:
@@ -3561,32 +3562,34 @@ To create a POSIX mutex, you have to allocate space for a
 
 One of the problems with this API is that \verb"pthread_mutex_t"
 behaves like a structure, so if you pass it as an argument, it makes a
-copy, which makes the mutex behave wrong.  To avoid that, you have to
+copy, which makes the mutex behave incorrectly.  To avoid that, you have to
 pass \verb"pthread_mutex_t" by address.
 
 My code makes it easier to get that right.  It defines a
-type, {\tt Mutex}, which is a structure that contains a
-\verb"pthread_mutex_t".  Actually, it contains an array of one
-\verb"pthread_mutex_t", so when you allocate space for a
-{\tt Mutex}, it allocates space for the ``array'' at the same
-time.
+type, {\tt Mutex}, which is just a more readable name for
+\verb"pthread_mutex_t":
 
 \begin{verbatim}
-typedef struct {
-  pthread_mutex_t mutex[1];
-} Mutex;
+#include <pthread.h>
 
+typedef pthread_mutex_t Mutex;
+\end{verbatim}
+
+Then it defines \verb"make_mutex", which allocates space and
+initializes the mutex:
+
+\begin{verbatim}
 Mutex *make_mutex()
 {
-    Mutex *mutex = (Mutex *) malloc(sizeof(Mutex));
-    pthread_mutex_init(mutex->mutex, NULL);
-    return mutex;
+  Mutex *mutex = check_malloc(sizeof(Mutex));
+  int n = pthread_mutex_init(mutex, NULL);
+  if (n != 0) perror_exit("make_lock failed"); 
+  return mutex;
 }
 \end{verbatim}
 
-\verb"make_mutex" creates a {\tt Mutex} struct and returns a
-pointer to it.  You can pass this pointer as an argument without
-causing unwanted copying.
+The return value is a pointer, which you can pass around as an
+argument without causing unwanted copying.
 
 The functions to lock and unlock the mutex are simple wrappers
 for POSIX functions:
@@ -3594,27 +3597,538 @@ for POSIX functions:
 \begin{verbatim}
 void mutex_lock(Mutex *mutex)
 {
-    pthread_mutex_lock(mutex->mutex);
+  int n = pthread_mutex_lock(mutex);
+  if (n != 0) perror_exit("lock failed");
 }
 
 void mutex_unlock(Mutex *mutex)
 {
-    pthread_mutex_unlock(mutex->mutex);
+  int n = pthread_mutex_unlock(mutex);
+  if (n != 0) perror_exit("unlock failed");
 }
 \end{verbatim}
-
-The expression {\tt mutex->mutex} is not as strange as it seems:
-{\tt mutex} is a pointer to {\tt Mutex}.  The field, {\tt mutex->mutex} is
-a pointer to \verb"pthread_mutex_t", which is the type expected
-by \verb"pthread_mutex_lock" and \verb"pthread_mutex_unlock".
 
 This code is in {\tt mutex.c} and the header file {\tt mutex.h}.
 
 
+\chapter{Condition variables}
+\label{csem}
+
+Many simple synchronization problems can be solved using mutexes
+as shown in the previous chapter.  In this chapter I introduce a
+bigger challenge, the well-known ``Producer-Consumer problem'', and
+a new tool to solve it, the condition variable.
+
+\section{The work queue}
+
+In some multi-threaded programs, threads are organized to perform
+different tasks.  Often they communicate with each other using a queue,
+where some threads, called ``producers'', put data into the queue
+and other threads, called ``consumers'', take data out.
+
+For example, in applications with a graphical user interface, there
+might be one thread that runs the GUI, responding to user events,
+and another thread that processes user requests.  In that case,
+the GUI thread might put requests into a queue and the ``back end''
+thread might take requests out and process them.
+
+To support this organization, we need a queue implementation that
+is ``thread safe'', which means that both threads (or more than two)
+can access the queue at the same time.  And we need to handle at least
+one special case, when the queue is empty; and, if the size of the
+queue is bounded, when the queue is full.
+
+I'll start with a simple queue that is not thread safe, then we'll see
+what goes wrong and fix it.  The code for this example is in the
+repository for this book, in a folder called {\tt queue}.  The file
+{\tt queue.c} contains a basic implementation of a circular buffer,
+which you can read about at
+\url{https://en.wikipedia.org/wiki/Circular_buffer}.
+
+Here's the structure definition:
+
+\begin{verbatim}
+typedef struct {
+  int *array;
+  int length;
+  int next_in;
+  int next_out;
+} Queue;
+\end{verbatim}
+
+{\tt array} is the array that contains the elements of the queue.
+For this example the elements are ints, but more generally
+they would be structures that contain user events, items of work, etc.
+
+{\tt length} is the length of the array.  \verb"next_in" is an
+index into the array that indices where the next element should be
+added; similarly, \verb"next_out" is the index of the next element
+that should be removed.
+
+\verb"make_queue" allocates space for this structure and initializes
+the fields:
+
+\begin{verbatim}
+Queue *make_queue(int length)
+{
+  Queue *queue = (Queue *) malloc(sizeof(Queue));
+  queue->length = length;
+  queue->array = (int *) malloc(length * sizeof(int));
+  queue->next_in = 0;
+  queue->next_out = 0;
+  return queue;
+}
+\end{verbatim}
+
+The initial value for \verb"next_out" needs some explaining.
+Since the queue is initially empty, there is no next element to
+remove, so \verb"next_out" is invalid.  Setting
+\verb"next_out == next_in" is a special case that indicates
+that the queue is empty, so we can write:
+
+\begin{verbatim}
+int queue_empty(Queue *queue)
+{
+  return (queue->next_in == queue->next_out);
+}
+\end{verbatim}
+
+Now we can add elements to the queue using \verb"queue_push":
+
+\begin{verbatim}
+void queue_push(Queue *queue, int item) {
+  if (queue_full(queue)) {
+    perror_exit("queue is full");
+  }
+  
+  queue->array[queue->next_in] = item;
+  queue->next_in = queue_incr(queue, queue->next_in);
+}
+\end{verbatim}
+
+If the queue is full, \verb"queue_push" prints an error message
+and exits.  I will explain \verb"queue_full" soon.
+
+If the queue is not full, \verb"queue_push" inserts the new
+element and then increments \verb"next_in" using \verb"queue_incr":
+
+\begin{verbatim}
+int queue_incr(Queue *queue, int i)
+{
+  return (i+1) % queue->length;
+}
+\end{verbatim}
+
+When the index, {\tt i}, gets to the end of the array, it wraps around
+to 0.  And that's where we run into a tricky part.  If we keep adding
+elements to the queue, eventually \verb"next_in" wraps around and catches
+up with \verb"next_out".  But if \verb"next_in == next_out", we would
+incorrectly conclude that the queue was empty.
+
+To avoid that, we define another special case to indicate that the
+queue is full:
+
+\begin{verbatim}
+int queue_full(Queue *queue)
+{
+  return (queue_incr(queue, queue->next_in) == queue->next_out);
+}
+\end{verbatim}
+
+If incrementing \verb"next_in" lands on \verb"next_out", that means
+we can't add another element without making the queue seem empty.  So
+we stop one element before the ``end'' (keeping in mind that the end of
+the queue can be anywhere, not necessarily the end of the array).
+
+Now we can write \verb"queue_pop", which removes and returns the next
+element from the queue:
+
+\begin{verbatim}
+int queue_pop(Queue *queue) {
+  if (queue_empty(queue)) {
+    perror_exit("queue is empty");
+  }
+  
+  int item = queue->array[queue->next_out];
+  queue->next_out = queue_incr(queue, queue->next_out);
+  return item;
+}
+\end{verbatim}
+
+If you try to pop from an empty queue, \verb"queue_pop" prints
+an error message and exits.
+
+
+\section{Producers and consumers}
+
+Now let's make some threads to access this queue.  Here's the
+producer code:
+
+\begin{verbatim}
+void *producer_entry(void *arg)
+{
+  int i;
+  Shared *shared = (Shared *) arg;
+  for (i=0; i<QUEUE_LENGTH-1; i++) {
+    printf("adding item %d\n", i);
+    queue_push(shared->queue, i);
+  }
+  pthread_exit(NULL);
+}
+\end{verbatim}
+
+Here's the consumer code:
+
+\begin{verbatim}
+void *consumer_entry(void *arg)
+{
+  int i;
+  int item;
+  Shared *shared = (Shared *) arg;
+
+  for (i=0; i<QUEUE_LENGTH-1; i++) {
+    item = queue_pop(shared->queue);
+    printf("consuming item %d\n", item);
+  }
+  pthread_exit(NULL);
+}
+\end{verbatim}
+
+Here's the parent code that starts the threads and waits for them
+
+\begin{verbatim}
+  int i;
+  pthread_t child[NUM_CHILDREN];
+
+  Shared *shared = make_shared();
+
+  child[0] = make_thread(producer_entry, shared);
+  child[1] = make_thread(consumer_entry, shared);
+
+  for (i=0; i<NUM_CHILDREN; i++) {
+    join_thread(child[i]);
+  }
+\end{verbatim}
+
+And finally here's the shared structure that contains the queue:
+
+\begin{verbatim}
+typedef struct {
+  Queue *queue;
+} Shared;
+
+Shared *make_shared()
+{
+  Shared *shared = check_malloc(sizeof(Shared));
+  shared->queue = make_queue(QUEUE_LENGTH);
+  return shared;
+}
+\end{verbatim}
+
+The code we have so far is a good starting place, but it has
+several problems:
+
+\begin{itemize}
+
+\item Access to the queue is not thread safe.  Different threads
+could access {\tt array}, \verb"next_in", and \verb"next_out"
+at the same time and leave the queue in a broken, ``inconsistent''
+state.
+
+\item If the consumer is scheduled first, it finds the queue empty,
+print an error message, and exits.  We would rather have the consumer
+block until the queue is not empty.  Similarly, we would like the
+producer to block if the queue is full.
+
+\end{itemize}
+
+In the next section, we solve the first problem with a Mutex.
+In the following section, we solve the second problem with condition
+variables.
+
+
+\section{Mutual exclusion}
+
+We can make the queue thread safe with a mutex.  This version
+of the code is in \verb"queue_mutex.c".
+
+First we add a Mutex pointer to the queue structure:
+
+\begin{verbatim}
+typedef struct {
+  int *array;
+  int length;
+  int next_in;
+  int next_out;
+  Mutex *mutex;          //-- this line is new
+} Queue;
+
+Queue *make_queue(int length)
+{
+  Queue *queue = (Queue *) malloc(sizeof(Queue));
+  queue->length = length;
+  queue->array = (int *) malloc(length * sizeof(int));
+  queue->next_in = 0;
+  queue->next_out = 0;
+  queue->mutex = make_mutex();   //-- new
+  return queue;
+}
+\end{verbatim}
+
+Next we add synchronization code to \verb"queue_push":
+
+\begin{verbatim}
+void queue_push(Queue *queue, int item) {
+  mutex_lock(queue->mutex);   //-- new
+  if (queue_full(queue)) {
+    mutex_unlock(queue->mutex);   //-- new
+    perror_exit("queue is full");
+  }
+  
+  queue->array[queue->next_in] = item;
+  queue->next_in = queue_incr(queue, queue->next_in);
+  mutex_unlock(queue->mutex);   //-- new
+}
+\end{verbatim}
+
+Before checking whether the queue is full, we have to lock
+the mutex.  If the queue is full, we have to unlock
+the mutex before exiting; otherwise the thread would leave
+the mutex locked and no other threads could proceed.
+
+The synchronization code for \verb"queue_pop" is similar:
+
+\begin{verbatim}
+int queue_pop(Queue *queue) {
+  mutex_lock(queue->mutex);
+  if (queue_empty(queue)) {
+    mutex_unlock(queue->mutex);
+    perror_exit("queue is empty");
+  }
+  
+  int item = queue->array[queue->next_out];
+  queue->next_out = queue_incr(queue, queue->next_out);
+  mutex_unlock(queue->mutex);
+  return item;
+}
+\end{verbatim}
+
+This version of the queue is thread safe; if you run it, you
+should not see any synchronization errors.  But it is likely
+that the consumer will exit at some point because the queue is
+empty, or the  producer will exit because the queue is full,
+or both.
+
+The next step is to add condition variables.
+
+\section{Condition variables}
+
+A condition variable does indicates whether a condition is
+true and allows threads to block until the condition becomes true.
+For example, \verb"thread_push" might want to check whether the
+queue is full and, if so, block until it is not full.  So the
+``condition'' we are interested in is ``queue not full''.
+
+Similarly, \verb"thread_pop" might want to wait for a condition
+like ``queue not empty''.
+
+Here's how we can add these capabilities to the queue code.  First
+we add two condition variables to the Queue structure:
+
+\begin{verbatim}
+typedef struct {
+  int *array;
+  int length;
+  int next_in;
+  int next_out;
+  Mutex *mutex;
+  Cond *nonempty;   //-- new
+  Cond *nonfull;    //-- new
+} Queue;
+\end{verbatim}
+
+And initialize them in \verb"make_queue":
+
+\begin{verbatim}
+Queue *make_queue(int length)
+{
+  Queue *queue = (Queue *) malloc(sizeof(Queue));
+  queue->length = length;
+  queue->array = (int *) malloc(length * sizeof(int));
+  queue->next_in = 0;
+  queue->next_out = 0;
+  queue->mutex = make_mutex();
+  queue->nonempty = make_cond();   //-- new
+  queue->nonfull = make_cond();    //-- new
+  return queue;
+}
+\end{verbatim}
+
+Now in \verb"queue_pop", if we find the queue empty, we don't
+exit; instead we use the condition variable to block:
+
+\begin{verbatim}
+int queue_pop(Queue *queue) {
+  mutex_lock(queue->mutex);
+  while (queue_empty(queue)) {
+    cond_wait(queue->nonempty, queue->mutex);  //-- new
+  }
+  
+  int item = queue->array[queue->next_out];
+  queue->next_out = queue_incr(queue, queue->next_out);
+  mutex_unlock(queue->mutex);
+  cond_signal(queue->nonfull);   //-- new
+  return item;
+}
+\end{verbatim}
+
+\verb"cond_wait" is complicated, so let's take it slow.  
+The first argument is the condition variable; in this case,
+the condition we are waiting for is ``queue not empty''.  The second
+argument is the mutex that protects the queue.  Before you
+call \verb"cond_wait", you have to lock the mutex.  Otherwise the
+whole thing doesn't work.
+
+When the thread that locked the mutex calls \verb"cond_wait", it
+unlocks the mutex and then blocks.  This is important.  If
+\verb"cond_wait" did not unlock the mutex before blocking, no
+other thread would be able to access the queue, no more items
+could be added, and the queue would always be empty.
+
+So while the consumer is blocked on {\tt nonempty}, the producer can
+run.  Let's see what happens when the producer runs \verb"queue_push":
+
+\begin{verbatim}
+void queue_push(Queue *queue, int item) {
+  mutex_lock(queue->mutex);
+  while (queue_full(queue)) {
+    cond_wait(queue->nonfull, queue->mutex);    //-- new
+  }
+  
+  queue->array[queue->next_in] = item;
+  queue->next_in = queue_incr(queue, queue->next_in);
+  mutex_unlock(queue->mutex);
+  cond_signal(queue->nonempty);  //-- new
+}
+\end{verbatim}
+
+Let's assume that the queue is not full, so the producer doesn't
+run \verb"cond_wait" and doesn't block.  It adds a new element
+to the queue and then unlocks the mutex.  But before exiting,
+it does one more thing: it ``signals'' the condition variable
+{\tt nonempty}.
+
+Signalling a condition variable indicates that the condition is
+true, or at least that it might be.  If there are no threads waiting
+on the condition variable, the signal has no effect.
+
+If there are threads waiting on the condition variable, one of them
+gets unblocked and resumes execution of \verb"cond_wait".  But before
+the awakened thread can return from \verb"cond_wait", it has
+to wait for and lock the mutex, again.
+
+Now go back to \verb"queue_pop" and see what happens when the thread
+returns from \verb"cond_wait".  It loops back to the top of the while
+loop and checks the condition again.  I'll explain why in just a
+second, but for now let's assume that the condition is true; that is,
+the queue is not empty.
+
+When the thread exits the while loop, we know two things: (1) the condition
+is true, so there is at least one item in the queue, and (2) the mutex
+is locked, so it is safe to access the queue.
+
+After removing an item, \verb"queue_pop" unlocks the mutex, signals
+that the queue is not full, and returns.
+
+In the next section I'll show you how my Cond code works, but first I
+want to answer two frequently-asked question:
+
+\begin{itemize}
+
+\item Why is \verb"cond_wait" inside a for loop rather than an if
+statement; that is, why do we have to check the condition again after
+returning from \verb"cond_wait"?
+
+The primary reason you have to re-check the condition is the possibility
+of an intercepted signal.  Suppose Thread A is waiting on {\tt nonempty}.
+Thread B adds an item to the queue and signals {\tt nonempty}.  Thread
+A wakes up an tries to lock the mutex, but before it gets the chance,
+Evil Thread C swoops in, locks the mutex, pops the item from the
+queue, and unlocks the mutex.  Now the queue is empty again, but
+Thread A is not blocked any more.  Thread A could lock the mutex and
+returns from \verb"cond_wait".  If Thread A does not check the condition
+again, it would try to pop an element from an empty queue, and probably
+cause an error.
+
+\item The other question that comes up when people learn about condition
+variables is ``How does the condition variable know what condition it
+is associated with?''
+
+This question is understandable because there is no explicit connection
+between a Cond structure and the condition it relates to.  The
+connection is implicit in the way it is used.
+
+Here's one way to think of it: the condition associated with a Cond
+is the thing that is false when you call \verb"cond_wait" and true
+when you call \verb"cond_signal".  Of course, there might be many
+conditions that are true in the first case and false in the second.
+The right one is only in the mind of the programmer, so it should be
+explained carefully in the documentation.
+
+\end{itemize}
+
+
+\section{Condition variable implementation}
+
+The Cond structure I used in the previous section is a is a wrapper
+for a type called \verb"pthread_cond_t", which is defined in the POSIX
+threads API.  It is very similar to Mutex, which is a wrapper for
+\verb"pthread_mutex_t".  Both wrappers are defined in {\tt utils.c} and
+{\tt utils.h}.
+
+Here's the typedef:
+
+\begin{verbatim}
+typedef pthread_cond_t Cond;
+\end{verbatim}
+
+\verb"make_cond" allocates space, initializes the condition variable,
+and returns a pointer:
+
+\begin{verbatim}
+Cond *make_cond()
+{
+  Cond *cond = check_malloc(sizeof(Cond)); 
+  int n = pthread_cond_init(cond, NULL);
+  if (n != 0) perror_exit("make_cond failed");
+ 
+  return cond;
+}
+\end{verbatim}
+
+And here are the wrappers for \verb"cond_wait" and \verb"cond_signal".
+
+\begin{verbatim}
+void cond_wait(Cond *cond, Mutex *mutex)
+{
+  int n = pthread_cond_wait(cond, mutex);
+  if (n != 0) perror_exit("cond_wait failed");
+}
+
+void cond_signal(Cond *cond)
+{
+  int n = pthread_cond_signal(cond);
+  if (n != 0) perror_exit("cond_signal failed");
+}
+\end{verbatim}
+
+At this point there should be nothing too surprising there.
+
 
 
 \chapter{Semaphores in C}
-\label{csem}
+
+NOTE: This chapter is not done, and might get deleted.
 
 \section{Semaphores}
 
@@ -3674,8 +4188,6 @@ sem_wait(mutex);
 sem_post(mutex);
 \end{verbatim}
 
-???
-
 %TODO: why is this annoying?
 
 Annoyingly, POSIX semaphores use {\tt post} instead of
@@ -3703,61 +4215,6 @@ with POSIX Threads} \cite{butenhof}.
 
 Puzzle: read about mutexes and condition variables, and then
 use them to write an implementation of semaphores.
-
-You might want to use the following utility code in your solutions.
-Here is my wrapper for Pthreads mutexes:
-
-\begin{verbatim}
-typedef pthread_mutex_t Mutex;
-
-Mutex *make_mutex ()
-{
-  Mutex *mutex = check_malloc (sizeof(Mutex));
-  int n = pthread_mutex_init (mutex, NULL);
-  if (n != 0) perror_exit ("make_lock failed"); 
-  return mutex;
-}
-
-void mutex_lock (Mutex *mutex)
-{
-  int n = pthread_mutex_lock (mutex);
-  if (n != 0) perror_exit ("lock failed");
-}
-
-void mutex_unlock (Mutex *mutex)
-{
-  int n = pthread_mutex_unlock (mutex);
-  if (n != 0) perror_exit ("unlock failed");
-}
-\end{verbatim}
-
-\newpage
-And my wrapper for Pthread condition variables:
-
-\begin{verbatim}
-typedef pthread_cond_t Cond;
-
-Cond *make_cond ()
-{
-  Cond *cond = check_malloc (sizeof(Cond)); 
-  int n = pthread_cond_init (cond, NULL);
-  if (n != 0) perror_exit ("make_cond failed");
-  return cond;
-}
-
-void cond_wait (Cond *cond, Mutex *mutex)
-{
-  int n = pthread_cond_wait (cond, mutex);
-  if (n != 0) perror_exit ("cond_wait failed");
-}
-
-void cond_signal (Cond *cond)
-{
-  int n = pthread_cond_signal (cond);
-  if (n != 0) perror_exit ("cond_signal failed");
-}
-\end{verbatim}
-
 
 
 \clearemptydoublepage
@@ -3853,10 +4310,6 @@ With the {\tt do...while} loop, it is guaranteed\footnote{Well,
   guarantee.} that when a thread signals, one of the waiting threads
 will get the signal, even if another thread gets the mutex at
 Line~\ref{sementer} before one of the waiting threads resumes.
-
-
-
-
 
 \end{document}
 

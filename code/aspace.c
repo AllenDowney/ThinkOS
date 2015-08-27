@@ -1,7 +1,7 @@
 /* Example code for Think OS.
 
-Copyright 2014 Allen Downey
-License: GNU GPLv3
+Copyright 2015 Allen Downey
+License: Creative Commons Attribution-ShareAlike 3.0
 
 */
 

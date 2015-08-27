@@ -39,7 +39,7 @@
 \author{Allen B. Downey}
 
 \newcommand{\thetitle}{Think OS: A Brief Introduction to Operating Systems}
-\newcommand{\theversion}{0.4.3}
+\newcommand{\theversion}{0.4.4}
 
 % these styles get translated in CSS for the HTML version
 \newstyle{a:link}{color:black;}
@@ -292,10 +292,13 @@ Chapter 7 is about caching and the memory hierarchy.
 
 Chapter 8 is about multitasking and scheduling.
 
-Chapter 9 is about POSIX threads.
+Chapter 9 is about POSIX threads and mutexes.
+Recommended reading: {\it Head First C} Chapter 12.
 
-Chapter 10 is about synchronization with POSIX mutexes and
-condition variables.
+Chapter 10 is about POSIX condition variables and the producer/consumer
+problem.
+
+Chapter 11 is about implementing semaphores in C.
 
 
 \section*{A note on this draft}
@@ -306,13 +309,43 @@ there are a few places where, I'm sure, the explanation will be
 greatly improved when the figures are ready.
 
 
-\section*{Where to get the code}
+\section{Using the code}
+\label{code}
 
-The source material for this book and the supporting code
-are in a Git repository at \url{https://github.com/AllenDowney/ThinkOS}.
+Example code for this book is available from
+\url{https://github.com/AllenDowney/ThinkOS}.  Git is a version
+control system that allows you to keep track of the files that
+make up a project.  A collection of files under Git's control is
+called a {\bf repository}.  GitHub is a hosting service that provides
+storage for Git repositories and a convenient web interface.
+\index{repository}
+\index{Git}
+\index{GitHub}
 
-%\section*{Acknowledgements}
+The GitHub homepage for my repository provides several ways to
+work with the code:
 
+\begin{itemize}
+
+\item You can create a copy of my repository
+on GitHub by pressing the {\sf Fork} button.  If you don't already
+have a GitHub account, you'll need to create one.  After forking, you'll
+have your own repository on GitHub that you can use to keep track
+of code you write while working on this book.  Then you can
+clone the repo, which means that you copy the files
+to your computer.
+\index{fork}
+
+\item Or you could clone
+my repository.  You don't need a GitHub account to do this, but you
+won't be able to write your changes back to GitHub.
+\index{clone}
+
+\item If you don't want to use Git at all, you can download the files
+in a Zip file using the button in the lower-right corner of the
+GitHub page.
+
+\end{itemize}
 
 
 \section*{Contributor List}
@@ -539,7 +572,6 @@ program:
 int main()
 {
     printf("Hello World\n");
-    return 0;
 }
 \end{verbatim}
 
@@ -714,9 +746,10 @@ will get a ``Floating point exception.''  And if you try to read or
 write an incorrect location in memory, you will get a ``Segmentation
 fault.''
 
+% TODO: -Wall and lint
+
 
 \chapter{Processes}
-
 
 \section{Abstraction and virtualization}
 
@@ -974,6 +1007,8 @@ are interested you can search for more information about them.
 You should run {\tt ps} on your system and compare your results
 to mine.
 
+%TODO: using gdb here?
+
 
 \chapter{Virtual memory}
 
@@ -1142,7 +1177,8 @@ from one system to another, but in the most common arrangement:
 \end{itemize}
 
 To determine the layout of these segments on your system, try running
-this program (you can download it from \url{http://TODO}):
+this program, which is in {\tt aspace.c} in the repository for this
+book (see Section~\ref{code}).
 
 \begin{verbatim}
 #include <stdio.h>
@@ -1159,8 +1195,6 @@ int main ()
     printf ("Address of global is %p\n", &global);
     printf ("Address of local is %p\n", &local);
     printf ("Address of p is %p\n", p);
-    
-    return 0;
 }
 \end{verbatim}
 
@@ -1199,6 +1233,38 @@ results to mine.  Add a second call to {\tt malloc} and check whether
 the heap on your system grows up (toward larger addresses).  Add a
 function that prints the address of a local variable, and check
 whether the stack grows down.
+
+
+\section{Static local variables}
+
+Local variables on the stack are sometimes called ``automatic'',
+because they are allocated automatically when a function is called,
+and freed automatically when the function returns.
+
+In C there is another kind of local variable, called ``static'',
+which is allocated in the static segment.  It is initialized when
+the program starts and keeps its value from one function call to
+the next.
+
+For example, the following function keeps track of how many times
+it has been called.
+
+\begin{verbatim}
+int times_called()
+{
+  static int counter = 0;
+  counter++;
+  return counter;
+}
+\end{verbatim}
+
+The keyword {\tt static} indicates that {\tt counter} is a static
+local variable.  The initialization happens only once, when the program
+starts.
+
+If you add this function to {\tt aspace.c} you can confirm that
+{\tt counter} is allocated in the static segment along with global
+variables, not in the stack.
 
 
 \section{Address translation}
@@ -1630,10 +1696,10 @@ It also makes programs more versatile, since a program intended to
 work with files can also work with data coming from pipes and other
 sources.
 
+% TODO: gprof here?
 
 
 \chapter{More bits and bytes}
-
 
 \section{Representing integers}
 
@@ -1814,6 +1880,9 @@ union and bitwise operations.  Here's an example:
     printf("0x%x\n", coef);
 \end{verbatim}
 %
+This code is in {\tt float.c} in the repository for this
+book (see Section~\ref{code}).
+
 The union allows us to store a floating-point value using
 {\tt p.f} and then read it as an unsigned integer using
 {\tt p.u}.
@@ -1981,7 +2050,7 @@ You will find that the ASCII representation of the first 8 characters
 of my name, interpreted as a double-precision floating point number,
 is 69779713878800585457664.
 
-
+% TODO: assert here?
 
 
 \chapter{Memory management}
@@ -2203,6 +2272,9 @@ Because memory management is so difficult, most large programs, like
 web browsers, leak memory.  To see which programs on your system are
 using the most memory, you can use the UNIX utilities {\tt ps} and
 {\tt top}.
+
+
+% TODO: using Valgrind here?
 
 
 \section{Implementation}
@@ -2483,8 +2555,9 @@ and measures the average time to read and write an element.  By
 varying the size of the array, it is possible to infer the size
 of the cache, the block size, and some other attributes.
 
-You can download my modified version of this program from
-\url{TODO: fill in this URL}.
+My modified version of this program is in the {\tt cache} directory
+of the repository for this
+book (see Section~\ref{code}).
 
 The kernel of the program is this loop:
 
@@ -2997,8 +3070,6 @@ occurs, the kernel can switch to another process or allow the
 interrupted process to resume.  The part of the operating system
 that makes this decision is the ``scheduler''.
 
-% TODO: is there a section about paging?
-
 
 \section{The process life cycle}
 
@@ -3167,10 +3238,9 @@ highest priority runs within a fixed amount of time.
 \item Reorganizing interrupt handlers to guarantee
 a maximum completion time.
 
-\item Modifying locks and other synchronization mechanisms to
-allow a high-priority task to preempt a lower-priority task.
-
-% TODO: Add a forward reference to the synchronization chapter.
+\item Modifying locks and other synchronization mechanisms (coming up
+  in the next chapter) to allow a high-priority task to preempt a
+  lower-priority task.
 
 \item Choosing an implementation of dynamic memory allocation that
 guarantees a maximum completion time.
@@ -3206,8 +3276,7 @@ of the code.
 
 And they share the same static segment, so if one thread changes a
 global variable, other threads see the change.  They also share the heap,
-so threads can share dynamically-allocated
-chunks.
+so threads can share dynamically-allocated chunks.
 
 But each thread has its own stack, so threads can call functions without
 interfering with each other.  And usually threads can't access each
@@ -3216,8 +3285,6 @@ other's local variables.
 The example code for this chapter is in the repository for this book,
 in a directory named {\tt counter}.  For information on downloading
 this code, see Section~\ref{code}.
-
-% TODO: write this section
 
 
 \section{Creating threads}
@@ -3248,7 +3315,6 @@ For my examples, I include the following headers:
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
-#include <semaphore.h>
 \end{verbatim}
 
 The first two are standard; the third is for Pthreads and
@@ -3358,10 +3424,10 @@ void child_code(Shared *shared)
 }
 \end{verbatim}
 
-When {\tt child\_code} returns, {\tt entry} invokes {\tt pthread\_exit}
-which can be used to pass a value to the thread
-that joins with this thread.  In this case, the child
-has nothing to say, so we pass {\tt NULL}.
+When {\tt child\_code} returns, {\tt entry} invokes
+\verb"pthread_exit" which can be used to pass a value to the thread
+that joins with this thread.  In this case, the child has nothing to
+say, so we pass {\tt NULL}.
 
 Finally, here is the code that creates the child threads:
 
@@ -3420,9 +3486,9 @@ of the children is late, the loop might have to wait, and other children
 might complete in the meantime.  But regardless, the loop exits
 only when all children are done.
 
-If you have downloaded the repository for this book, you'll find
-this example in {\tt counter/counter.c}.  You can compile and
-run it like this:
+If you have downloaded the repository for this book (see
+Section~\ref{code}), you'll find this example in {\tt
+  counter/counter.c}.  You can compile and run it like this:
 
 \begin{verbatim}
 $ make counter
@@ -3769,6 +3835,7 @@ void *producer_entry(void *arg)
 {
   int i;
   Shared *shared = (Shared *) arg;
+
   for (i=0; i<QUEUE_LENGTH-1; i++) {
     printf("adding item %d\n", i);
     queue_push(shared->queue, i);
@@ -3793,6 +3860,8 @@ void *consumer_entry(void *arg)
   pthread_exit(NULL);
 }
 \end{verbatim}
+
+%TODO: switch to c99 and inline the declarations of i
 
 Here's the parent code that starts the threads and waits for them
 
@@ -3862,7 +3931,11 @@ typedef struct {
   int next_out;
   Mutex *mutex;          //-- this line is new
 } Queue;
+\end{verbatim}
 
+And initialize the Mutex in \verb"make_queue":
+
+\begin{verbatim}
 Queue *make_queue(int length)
 {
   Queue *queue = (Queue *) malloc(sizeof(Queue));
@@ -3913,21 +3986,28 @@ int queue_pop(Queue *queue) {
 }
 \end{verbatim}
 
-This version of the queue is thread safe; if you run it, you
+Note that the other Queue functions, \verb"queue_full",
+\verb"queue_empty", and \verb"queue_incr" do not try to lock
+the mutex.  Any thread that calls these functions is required to
+lock the mutex first; this requirement is part of the documented
+interface for these functions.
+
+With this additional code, the queue is thread safe; if you run it, you
 should not see any synchronization errors.  But it is likely
 that the consumer will exit at some point because the queue is
-empty, or the  producer will exit because the queue is full,
+empty, or the producer will exit because the queue is full,
 or both.
 
 The next step is to add condition variables.
 
+
 \section{Condition variables}
 
-A condition variable does indicates whether a condition is
-true and allows threads to block until the condition becomes true.
-For example, \verb"thread_push" might want to check whether the
-queue is full and, if so, block until it is not full.  So the
-``condition'' we are interested in is ``queue not full''.
+A condition variable is a data structure associated with a condition;
+it allows threads to block until the condition becomes true.  For
+example, \verb"thread_push" might want to check whether the queue is
+full and, if so, block until it is not full.  So the ``condition'' we
+are interested in is ``queue not full''.
 
 Similarly, \verb"thread_pop" might want to wait for a condition
 like ``queue not empty''.

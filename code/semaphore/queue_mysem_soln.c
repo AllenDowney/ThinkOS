@@ -11,7 +11,7 @@ License: Creative Commons Attribution-ShareAlike 3.0
 #include <pthread.h>
 #include <semaphore.h>
 #include "utils.h"
-#include "sem.h"
+#include "mysem_soln.h"
 
 #define NUM_CHILDREN 2
 #define NUM_ITEMS 127
@@ -37,7 +37,7 @@ Queue *make_queue(int length)
   queue->next_out = 0;
   queue->mutex = make_semaphore(1);
   queue->items = make_semaphore(0);
-  queue->spaces = make_semaphore(length-1);
+  queue->spaces = make_semaphore(length);
   return queue;
 }
 

@@ -6,7 +6,9 @@ License: Creative Commons Attribution-ShareAlike 3.0
 */
 
 typedef struct {
-  // put whatever you need here
+  int value, wakeups;
+  Mutex *mutex;
+  Cond *cond;
 } Semaphore;
 
 Semaphore *make_semaphore(int value);

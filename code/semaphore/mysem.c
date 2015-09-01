@@ -14,35 +14,16 @@ License: Creative Commons Attribution-ShareAlike 3.0
 Semaphore *make_semaphore(int value)
 {
   Semaphore *semaphore = check_malloc(sizeof(Semaphore));
-  semaphore->value = value;
-  semaphore->wakeups = 0;
-  semaphore->mutex = make_mutex();
-  semaphore->cond = make_cond();
+  // initialize the fields here
   return semaphore;
 }
 
 void semaphore_wait(Semaphore *semaphore)
 {
-  mutex_lock(semaphore->mutex);
-  semaphore->value--;
-
-  if (semaphore->value < 0) {
-    do {
-      cond_wait(semaphore->cond, semaphore->mutex);
-    } while (semaphore->wakeups < 1);
-    semaphore->wakeups--;
-  }
-  mutex_unlock(semaphore->mutex);
+  // put your implementation here
 }
 
 void semaphore_signal(Semaphore *semaphore)
 {
-  mutex_lock(semaphore->mutex);
-  semaphore->value++;
-
-  if (semaphore->value <= 0) {
-    semaphore->wakeups++;
-    cond_signal(semaphore->cond);
-  }
-  mutex_unlock(semaphore->mutex);
+  // put your implementation here
 }

@@ -293,13 +293,14 @@ Chapter 7 is about caching and the memory hierarchy.
 Chapter 8 is about multitasking and scheduling.
 
 Chapter 9 is about POSIX threads and mutexes.
-Recommended reading: {\it Head First C} Chapter 12.
+Recommended reading: {\it Head First C} Chapter 12 and
+{\it Little Book of Semaphores} Chapters 1 and 2.
 
 Chapter 10 is about POSIX condition variables and the producer/consumer
-problem.
+problem. Recommended reading: {\it Little Book of Semaphores} Chapters 3
+and 4.
 
-Chapter 11 is about implementing semaphores in C.
-
+Chapter 11 is about using POSIX semaphores and implementing semaphores in C.
 
 \section*{A note on this draft}
 
@@ -3686,6 +3687,7 @@ bigger challenge, the well-known ``Producer-Consumer problem'', and
 a new tool to solve it, the condition variable.
 
 \section{The work queue}
+\label{queue}
 
 In some multi-threaded programs, threads are organized to perform
 different tasks.  Often they communicate with each other using a queue,
@@ -3826,6 +3828,7 @@ an error message and exits.
 
 
 \section{Producers and consumers}
+\label{prodcon}
 
 Now let's make some threads to access this queue.  Here's the
 producer code:
@@ -4208,18 +4211,31 @@ At this point there should be nothing too surprising there.
 
 \chapter{Semaphores in C}
 
-NOTE: This chapter is not done, and might get deleted.
+Semaphores are a good way to learn about synchronization, but
+they are not as widely used, in practice, as mutexes and
+condition variables.
 
-\section{Semaphores}
+Nevertheless, there are some syncrhonization problems that can be
+solved simply with semaphores, yielding solutions that are more
+demonstrably correct.
+
+This chapter presents a C API for working with semaphores and
+my code for making it easier to work with.  And it presents
+a final challenge: can you write an implementation of a semaphore
+using mutexes and condition variables?
+
+The code for this chapter is in directory {\tt semaphore} in the
+repository for this book (see Section~\ref{code}).
+
+
+\section{POSIX Semaphores}
 
 A semaphore is a structure used to help threads work together
 without interfering with each other.
 
-The POSIX standard specifies an interface for semaphores.
-This interface is not part of Pthreads, but most UNIXes
-that implement Pthreads also provide semaphores.  If you
-find yourself with Pthreads and without semaphores, you
-can make your own; see Section~\ref{makeyourown}.
+The POSIX standard specifies an interface for semaphores;
+it is not part of Pthreads, but most UNIXes
+that implement Pthreads also provide semaphores.
 
 POSIX semaphores have type {\tt sem\_t}.  
 This type behaves like a structure, so
@@ -4227,24 +4243,29 @@ if you assign it to a variable you are making a copy of the
 contents.  Copying a semaphore is almost certainly
 a bad idea.  In POSIX, the behavior of the copy is undefined.
 
-In my programs, I use capital letters to denote types 
-that behave like structures, and I always manipulate them with pointers.
 Fortunately, it is easy to put a wrapper around {\tt sem\_t}
-to make it look like a proper structure.  Here is the 
-{\tt typedef} and the wrapper that creates and initializes
-semaphores:
+to make it safer and easier to use.  My API is in {\tt sem.h}:
 
 \begin{verbatim}
 typedef sem_t Semaphore;
 
-Semaphore *make_semaphore(int n)
+Semaphore *make_semaphore(int value);
+void semaphore_wait(Semaphore *sem);
+void semaphore_signal(Semaphore *sem);
+\end{verbatim}
+
+{\tt Semaphore} is a synonym for \verb"sem_t", but I find it more
+readable, and the capital letter reminds me to treat it like an
+object and pass it by pointer.
+
+The implementation of these functions is in {\tt sem.c}:
+
+\begin{verbatim}
+Semaphore *make_semaphore(int value)
 {
   Semaphore *sem = check_malloc(sizeof(Semaphore));
-  int ret = sem_init(sem, 0, n);
-  if (ret == -1) {
-    perror("sem_init failed");
-    exit(-1);    
-  }
+  int n = sem_init(sem, 0, value);
+  if (n != 0) perror_exit("sem_init failed");
   return sem;
 }
 \end{verbatim}
@@ -4253,54 +4274,159 @@ Semaphore *make_semaphore(int n)
 as a parameter.  It allocates space for a Semaphore, initializes
 it, and returns a pointer to {\tt Semaphore}.
 
-{\tt sem\_init} uses old-style UNIX error reporting, which means
-that it returns $-1$ if something went wrong.  One nice thing
-about using wrapper functions is that you can wrap functions that
-use different error reporting conventions and provide more
-consistent interfaces.
+If {\tt sem\_init} returns 0 if it succeeds and -1 if anything
+goes wrong.  One nice thing
+about using wrapper functions is that you hide the error-checking
+code from the user.
 
-With these definitions, we can write C code that almost looks
-like a real programming language:
+Here is the implementation of \verb"semaphore_wait":
 
 \begin{verbatim}
-Semaphore *mutex = make_semaphore(1);
-sem_wait(mutex);
-sem_post(mutex);
-\end{verbatim}
-
-%TODO: why is this annoying?
-
-Annoyingly, POSIX semaphores use {\tt post} instead of
-{\tt signal}, but we can fix that:
-
-\begin{verbatim}
-int sem_signal(Semaphore *sem)
+void semaphore_wait(Semaphore *sem)
 {
-  return sem_post(sem);
+  int n = sem_wait(sem);
+  if (n != 0) perror_exit("sem_wait failed");
 }
 \end{verbatim}
 
-That's enough cleanup for now.
+And here is \verb"semaphore_signal":
+
+\begin{verbatim}
+void semaphore_signal(Semaphore *sem)
+{
+  int n = sem_post(sem);
+  if (n != 0) perror_exit("sem_post failed");
+}
+\end{verbatim}
+
+I prefer to call this operation ``signal'' rather than ``post'',
+although both terms are common.
+
+Here's an example that shows how to use a semaphore as a mutex:
+
+\begin{verbatim}
+Semaphore *mutex = make_semaphore(1);
+semaphore_wait(mutex);
+semaphore_signal(mutex);
+\end{verbatim}
+
+Note that you have to initialize the semaphore to 1 to indicate
+that the mutex is initially unlocked; that is, one thread can
+pass the semaphore without blocking.
+
+Here I am using the variable name {\tt mutex} to indicate that
+the semaphore is being used as a mutex.  But remember that the behavior
+of a semaphore is not the same as a Pthread mutex.
 
 
+\section{Producers and consumers with semaphores}
 
-\clearemptydoublepage
+Using the semaphore implementation from the previous section, we can
+write a solution to the Producer-Consumer problem from
+Section~\ref{prodcon}.
+The code in this section is in \verb"queue_sem.c".
+
+Here's the new definition of {\tt Queue}, replacing the mutex
+and condition variables with semaphores:
+
+\begin{verbatim}
+typedef struct {
+  int *array;
+  int length;
+  int next_in;
+  int next_out;
+  Semaphore *mutex;       //-- new
+  Semaphore *items;       //-- new
+  Semaphore *spaces;      //-- new
+} Queue;
+\end{verbatim}
+
+And here's the new version of \verb"make_queue":
+
+\begin{verbatim}
+Queue *make_queue(int length)
+{
+  Queue *queue = (Queue *) malloc(sizeof(Queue));
+  queue->length = length;
+  queue->array = (int *) malloc(length * sizeof(int));
+  queue->next_in = 0;
+  queue->next_out = 0;
+  queue->mutex = make_semaphore(1);
+  queue->items = make_semaphore(0);
+  queue->spaces = make_semaphore(length-1);
+  return queue;
+}
+\end{verbatim}
+
+{\tt mutex} is used to guarantee mutually-exclusive access to the queue;
+the initial value is 1, again, so the mutex is
+initially unlocked.
+
+{\tt items} is the number of items in the queue, which is also the number
+of consumer threads that can execute \verb"queue_pop" without blocking.
+Initially there are no items in the queue.
+
+{\tt spaces} is the number of empty spaces in the queue, which is the
+number of producer threads that can execute \verb"queue_push" without
+blocking.  Initially the number of spaces is the capacity of the queue,
+which is {\tt length-1}, as explained in Section~\ref{queue}.
+
+Here is the new version of \verb"queue_push", which is run by
+producer threads:
+
+\begin{verbatim}
+void queue_push(Queue *queue, int item) {
+  semaphore_wait(queue->spaces);
+  semaphore_wait(queue->mutex);
+
+  queue->array[queue->next_in] = item;
+  queue->next_in = queue_incr(queue, queue->next_in);
+
+  semaphore_signal(queue->mutex);
+  semaphore_signal(queue->items);
+}
+\end{verbatim}
+
+And here is the new version of \verb"queue_pop":
+
+\begin{verbatim}
+int queue_pop(Queue *queue) {
+  semaphore_wait(queue->items);
+  semaphore_wait(queue->mutex);
+  
+  int item = queue->array[queue->next_out];
+  queue->next_out = queue_incr(queue, queue->next_out);
+
+  semaphore_signal(queue->mutex);
+  semaphore_signal(queue->spaces);
+
+  return item;
+}
+\end{verbatim}
+
+This solution is explained, using pseudo-code, in Chapter 4 of
+{\it The Little Book of Semaphores}.
+
+Using the code in the repo for this book, you should be able to compile
+and run this solution.
+
+
 \section{Make your own semaphores}
 \label{makeyourown}
 
-The most commonly used synchronization tools for programs that use
-Pthreads are mutexes and condition variables, not semaphores.  For an
-explanation of these tools, I recommend Butenhof's {\em Programming
-with POSIX Threads} \cite{butenhof}.
+Any problem that can be solved with semaphores can also be solved
+with condition variables and mutexes.  One way to prove that's true
+is to implement a semaphore using condition variables and mutexes.
 
-Puzzle: read about mutexes and condition variables, and then
-use them to write an implementation of semaphores.
+Before you go on, you might want to try this as an exercise: write
+functions that implement the semaphore API in the previous section
+using using condition variables and mutexes.  You can fill in your
+solution in {\tt mysem.c} and {\tt mysem.h} in the repo for this book,
+and you'll find my solution in \verb"mysem_soln.c" and
+\verb"mysem_soln.h".
 
-
-\clearemptydoublepage
-\subsection{Semaphore implementation hint}
-
-Here is the structure definition I used for my semaphores:
+If you have trouble getting started, you can use the following
+structure definition, from my solution, as a hint:
 
 \begin{verbatim}
 typedef struct {
@@ -4314,7 +4440,7 @@ typedef struct {
 the number of pending signals; that is, the number of threads
 that have been woken but have not yet resumed execution.  The reason
 for wakeups is to make sure that our semaphores have
-Property 3, described in Section~\ref{props}.
+Property 3, described in {\tt The Little Book of Semaphores}.
 
 {\tt mutex} provides exclusive access to {\tt value} and
 {\tt wakeups}; {\tt cond} is the condition variable threads
@@ -4323,73 +4449,88 @@ wait on if they wait on the semaphore.
 Here is the initialization code for this structure:
 
 \begin{verbatim}
-Semaphore *make_semaphore (int value)
+Semaphore *make_semaphore(int value)
 {
-  Semaphore *semaphore = check_malloc (sizeof(Semaphore));
+  Semaphore *semaphore = check_malloc(sizeof(Semaphore));
   semaphore->value = value;
   semaphore->wakeups = 0;
-  semaphore->mutex = make_mutex ();
-  semaphore->cond = make_cond ();
+  semaphore->mutex = make_mutex();
+  semaphore->cond = make_cond();
   return semaphore;
 }
 \end{verbatim}
 
 
-\clearemptydoublepage
 \subsection{Semaphore implementation}
 
-Here is my implementation of semaphores using Pthread's mutexes
+Here is my implementation of semaphores using POSIX mutexes
 and condition variables:
 
 \begin{verbatim}
-void sem_wait (Semaphore *semaphore)
+void semaphore_wait(Semaphore *semaphore)
 {
-  mutex_lock (semaphore->mutex);
+  mutex_lock(semaphore->mutex);
   semaphore->value--;
 
   if (semaphore->value < 0) {
-    do {                       
-      cond_wait (semaphore->cond, semaphore->mutex);
+    do {
+      cond_wait(semaphore->cond, semaphore->mutex);
     } while (semaphore->wakeups < 1);
     semaphore->wakeups--;
   }
-  mutex_unlock (semaphore->mutex);
+  mutex_unlock(semaphore->mutex);
 }
+\end{verbatim}
 
-void sem_signal (Semaphore *semaphore)
+When a thread waits on the semaphore, it has to lock the mutex
+before it decrements {\tt value}.  If the value of the semaphore
+becomes negative, the thread has to block until a ``wakeup'' is
+available.  While it is blocked, the mutex is unlocked, so another
+thread can signal.
+
+Here is the code for \verb"semaphore_signal":
+
+\begin{verbatim}
+void semaphore_signal(Semaphore *semaphore)
 {
-  mutex_lock (semaphore->mutex);
+  mutex_lock(semaphore->mutex);
   semaphore->value++;
 
   if (semaphore->value <= 0) {
     semaphore->wakeups++;
-    cond_signal (semaphore->cond);
+    cond_signal(semaphore->cond);
   }
-  mutex_unlock (semaphore->mutex);
+  mutex_unlock(semaphore->mutex);
 }
 \end{verbatim}
 
-Most of this is straightforward; the only thing that might be 
-tricky is the {\tt do...while} loop at Line~\ref{dowhile}.
-This is an unusual way to use a condition variable, but in
-this case it is necessary.
+Again, a thread has to lock the mutex before it increments
+{\tt value}.  If the semaphore was negative, that means threads
+are waiting, so the signalling thread increments {\tt wakeups} and
+signals the condition variable.
 
-Puzzle: why can't we replace this {\tt do...while} loop
-with a {\tt while} loop?
+At this point one of the waiting threads might wake up, but the
+mutex is still locked until the signalling thread unlocks it.
 
-\clearemptydoublepage
-\subsection{Semaphore implementation detail}
+At that point, one of the waiting threads returns from \verb"cond_wait"
+and check whether a wakeup is still available.  If not, it
+loops and waits on the condition variable again.  If so, it
+decrements {\tt wakeups}, unlocks the mutex, and exits.
 
-With a {\tt while} loop, this implementation would not have
-Property 3.  It would be possible for a thread to signal
-and then run around and catch its own signal.
+One thing about this solution that might not be obvious is the use of
+a {\tt do...while} loop.  Can you figure out why it is not a
+more conventional {\tt while} loop?  What would go wrong?
+
+The problem is that with a {\tt while} loop this implementation would
+not have Property 3.  It would be possible for a thread to signal and
+then run around and catch its own signal.
 
 With the {\tt do...while} loop, it is guaranteed\footnote{Well,
   almost.  It turns out that a well-timed spurious wakeup (see
   \url{http://en.wikipedia.org/wiki/Spurious_wakeup}) can violate this
   guarantee.} that when a thread signals, one of the waiting threads
-will get the signal, even if another thread gets the mutex at
-Line~\ref{sementer} before one of the waiting threads resumes.
+will get the signal, even if the signalling thread runs around and
+gets the mutex before one of the waiting threads resumes.
 
 \end{document}
 

@@ -39,7 +39,7 @@
 \author{Allen B. Downey}
 
 \newcommand{\thetitle}{Think OS: A Brief Introduction to Operating Systems}
-\newcommand{\theversion}{0.4.4}
+\newcommand{\theversion}{0.5.5}
 
 % these styles get translated in CSS for the HTML version
 \newstyle{a:link}{color:black;}
@@ -372,10 +372,6 @@ College, who tested an early draft of this book in Spring 2014.
 They corrected many errors and made many helpful suggestions.
 I appreciate their pioneering spirit!
 
-\item Donald Robertson spotted two typos.
-
-\item Jim Tyson sent in two corrections.
-
 \item James P Giannoules spotted a copy-and-paste error.
 
 \item Andy Engle knows the difference between GB and GiB.
@@ -385,6 +381,9 @@ I appreciate their pioneering spirit!
 % ENDCONTRIB
 
 \end{itemize}
+
+Other people who found typos and errors include
+Jim Tyson, Donald Robertson, Jeremy Vermast, Yuzhong Huang, Ian Hill.
 
 \normalsize
 
@@ -1396,7 +1395,7 @@ Abstractly:
 \begin{itemize}
 
 \item A ``file system'' is a mapping from each file's name to its contents.
-If you think of the names as keys, and the the contents as values,
+If you think of the names as keys, and the contents as values,
 a file system is a kind of key-value database
 (see \url{https://en.wikipedia.org/wiki/Key-value_database}).
 
@@ -2469,9 +2468,9 @@ new in, we have to kick something out.  So if the CPU loads a value
 and then loads it again much later, it might not be in cache any more.
 
 The performance of many programs is limited by the effectiveness
-of the cache.  If the data the CPU needs is usually in cache,
+of the cache.  If the data needed by the CPU are usually in cache,
 the program can run at the full speed of the CPU.  If the CPU
-frequently needs data that is not in cache, the program is
+frequently needs data that are not in cache, the program is
 limited by the speed of memory.
 
 The cache ``hit rate'', $h$, is the fraction of memory accesses that
@@ -2894,7 +2893,7 @@ allow Process B to resume.  When it accesses a page that has been swapped
 out, the memory management unit notices that the page is ``invalid'' and
 causes an interrupt.
 
-\item When the operating system handles the interrupt, is sees that
+\item When the operating system handles the interrupt, it sees that
 the page is swapped out, so it transfers the page back from disk to
 memory.  
 
@@ -3316,6 +3315,7 @@ For my examples, I include the following headers:
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
+#include <semaphore.h>
 \end{verbatim}
 
 The first two are standard; the third is for Pthreads and
@@ -4230,7 +4230,7 @@ repository for this book (see Section~\ref{code}).
 
 \section{POSIX Semaphores}
 
-A semaphore is a structure used to help threads work together
+A semaphore is a data structure used to help threads work together
 without interfering with each other.
 
 The POSIX standard specifies an interface for semaphores;
@@ -4241,10 +4241,10 @@ POSIX semaphores have type {\tt sem\_t}.
 This type behaves like a structure, so
 if you assign it to a variable you are making a copy of the
 contents.  Copying a semaphore is almost certainly
-a bad idea.  In POSIX, the behavior of the copy is undefined.
+a bad idea; in POSIX, the behavior of the copy is undefined.
 
 Fortunately, it is easy to put a wrapper around {\tt sem\_t}
-to make it safer and easier to use.  My API is in {\tt sem.h}:
+to make it safer and easier to use.  My wrapper API is in {\tt sem.h}:
 
 \begin{verbatim}
 typedef sem_t Semaphore;
@@ -4274,10 +4274,10 @@ Semaphore *make_semaphore(int value)
 as a parameter.  It allocates space for a Semaphore, initializes
 it, and returns a pointer to {\tt Semaphore}.
 
-If {\tt sem\_init} returns 0 if it succeeds and -1 if anything
-goes wrong.  One nice thing
-about using wrapper functions is that you hide the error-checking
-code from the user.
+{\tt sem\_init} returns 0 if it succeeds and -1 if anything goes
+wrong.  One nice thing about using wrapper functions is that you can
+encapsulate the error-checking code, which makes the code that uses
+these functions more readable.
 
 Here is the implementation of \verb"semaphore_wait":
 
@@ -4307,11 +4307,13 @@ Here's an example that shows how to use a semaphore as a mutex:
 \begin{verbatim}
 Semaphore *mutex = make_semaphore(1);
 semaphore_wait(mutex);
+// protected code goes here
 semaphore_signal(mutex);
 \end{verbatim}
 
-Note that you have to initialize the semaphore to 1 to indicate
-that the mutex is initially unlocked; that is, one thread can
+When you use a semaphore as a mutex, you usually
+initialize it to 1 to indicate
+that the mutex is unlocked; that is, one thread can
 pass the semaphore without blocking.
 
 Here I am using the variable name {\tt mutex} to indicate that
@@ -4321,7 +4323,7 @@ of a semaphore is not the same as a Pthread mutex.
 
 \section{Producers and consumers with semaphores}
 
-Using the semaphore implementation from the previous section, we can
+Using these semaphore wrapper functions, we can
 write a solution to the Producer-Consumer problem from
 Section~\ref{prodcon}.
 The code in this section is in \verb"queue_sem.c".
@@ -4358,8 +4360,8 @@ Queue *make_queue(int length)
 }
 \end{verbatim}
 
-{\tt mutex} is used to guarantee mutually-exclusive access to the queue;
-the initial value is 1, again, so the mutex is
+{\tt mutex} is used to guarantee exclusive access to the queue;
+the initial value is 1, so the mutex is
 initially unlocked.
 
 {\tt items} is the number of items in the queue, which is also the number
@@ -4387,7 +4389,12 @@ void queue_push(Queue *queue, int item) {
 }
 \end{verbatim}
 
-And here is the new version of \verb"queue_pop":
+Notice that \verb"queue_push" doesn't have to call
+\verb"queue_full" any more; instead, the semaphore keeps track of
+how many spaces are available and blocks producers if the queue
+is full.
+
+Here is the new version of \verb"queue_pop":
 
 \begin{verbatim}
 int queue_pop(Queue *queue) {
@@ -4408,7 +4415,13 @@ This solution is explained, using pseudo-code, in Chapter 4 of
 {\it The Little Book of Semaphores}.
 
 Using the code in the repo for this book, you should be able to compile
-and run this solution.
+and run this solution.  You should be able to run:
+
+\begin{verbatim}
+$ make queue_sem
+$ ./queue_sem
+\end{verbatim}
+
 
 
 \section{Make your own semaphores}
@@ -4419,8 +4432,8 @@ with condition variables and mutexes.  One way to prove that's true
 is to implement a semaphore using condition variables and mutexes.
 
 Before you go on, you might want to try this as an exercise: write
-functions that implement the semaphore API in the previous section
-using using condition variables and mutexes.  You can fill in your
+functions that implement the semaphore API in {\tt sem.h}
+using using condition variables and mutexes.  You can put your
 solution in {\tt mysem.c} and {\tt mysem.h} in the repo for this book,
 and you'll find my solution in \verb"mysem_soln.c" and
 \verb"mysem_soln.h".
@@ -4484,7 +4497,7 @@ void semaphore_wait(Semaphore *semaphore)
 
 When a thread waits on the semaphore, it has to lock the mutex
 before it decrements {\tt value}.  If the value of the semaphore
-becomes negative, the thread has to block until a ``wakeup'' is
+becomes negative, the thread blocks until a ``wakeup'' is
 available.  While it is blocked, the mutex is unlocked, so another
 thread can signal.
 
@@ -4513,7 +4526,7 @@ At this point one of the waiting threads might wake up, but the
 mutex is still locked until the signalling thread unlocks it.
 
 At that point, one of the waiting threads returns from \verb"cond_wait"
-and check whether a wakeup is still available.  If not, it
+and checks whether a wakeup is still available.  If not, it
 loops and waits on the condition variable again.  If so, it
 decrements {\tt wakeups}, unlocks the mutex, and exits.
 

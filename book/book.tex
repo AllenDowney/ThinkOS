@@ -4163,7 +4163,7 @@ explained carefully in the documentation.
 
 \section{Condition variable implementation}
 
-The Cond structure I used in the previous section is a is a wrapper
+The Cond structure I used in the previous section is a wrapper
 for a type called \verb"pthread_cond_t", which is defined in the POSIX
 threads API.  It is very similar to Mutex, which is a wrapper for
 \verb"pthread_mutex_t".  Both wrappers are defined in {\tt utils.c} and
@@ -4215,7 +4215,7 @@ Semaphores are a good way to learn about synchronization, but
 they are not as widely used, in practice, as mutexes and
 condition variables.
 
-Nevertheless, there are some syncrhonization problems that can be
+Nevertheless, there are some synchronization problems that can be
 solved simply with semaphores, yielding solutions that are more
 demonstrably correct.
 

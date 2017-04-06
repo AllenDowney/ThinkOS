@@ -3384,7 +3384,6 @@ space for a {\tt Shared} structure and initializes the contents:
 \begin{verbatim}
 Shared *make_shared()
 {
-  int i;
   Shared *shared = check_malloc(sizeof (Shared));
   shared->counter = 0;
   return shared;

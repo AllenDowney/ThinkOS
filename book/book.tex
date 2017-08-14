@@ -3057,7 +3057,7 @@ In general, the kernel doesn't know which registers a process will
 use, so it has to save all of them.  Also, when it switches to a new
 process, it might have to clear data stored in the memory management
 unit (see
-Section~\ref{address_transaltion}).  And after the context switch, it
+Section~\ref{address_translation}).  And after the context switch, it
 might take some time for the new process to load data into the cache.
 For these reasons, context switches are relatively slow, on the order
 of thousands of cycles, or a few microseconds.

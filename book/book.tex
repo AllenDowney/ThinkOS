@@ -190,7 +190,7 @@ code has the effect of generating a device-independent representation
 of a textbook, which can be converted to other formats and printed.
 
 The \LaTeX\ source for this book is available from
-\url{http://thinkstats2.com}.
+\url{http://greenteapress.com/thinkos}.
 
 The cover for this book is based on a photo by Paul Friel
 (\url{http://flickr.com/people/frielp/}), who made it available under
@@ -3057,7 +3057,7 @@ In general, the kernel doesn't know which registers a process will
 use, so it has to save all of them.  Also, when it switches to a new
 process, it might have to clear data stored in the memory management
 unit (see
-Section~\ref{address_transaltion}).  And after the context switch, it
+Section~\ref{address_translation}).  And after the context switch, it
 might take some time for the new process to load data into the cache.
 For these reasons, context switches are relatively slow, on the order
 of thousands of cycles, or a few microseconds.
@@ -3384,7 +3384,6 @@ space for a {\tt Shared} structure and initializes the contents:
 \begin{verbatim}
 Shared *make_shared()
 {
-  int i;
   Shared *shared = check_malloc(sizeof (Shared));
   shared->counter = 0;
   return shared;

@@ -39,7 +39,7 @@
 \author{Allen B. Downey}
 
 \newcommand{\thetitle}{Think OS: A Brief Introduction to Operating Systems}
-\newcommand{\theversion}{0.6}
+\newcommand{\theversion}{0.7}
 
 % these styles get translated in CSS for the HTML version
 \newstyle{a:link}{color:black;}
@@ -1135,24 +1135,32 @@ allocated to another process.
 
 \section{Memory segments}
 
-The data of a running process is organized into 4 segments:
+%TODO: make this section consistent with Head First C
+
+% Also, fix header.html add padding.
+
+The data of a running process is organized into 5 segments:
 
 \begin{itemize}
 
-\item The text segment contains the program text; that is, the
+\item The code segment contains the program text; that is, the
   machine language instructions that make up the program.
 
-\item The static segment contains variables that are allocated
-  by the compiler, including global variables and local variables
-  that are declared {\tt static}.
+\item The static segment contains immutable values, like string
+literals.  For example, if your program contains the string
+{\tt "Hello, World"}, those character will be stored in the
+static segment.
 
-\item The stack segment contains the run-time stack, which is
-  made up of stack frames.  Each stack frame contains the 
-  parameters and local variables of a function.
+\item The globals segment contains global variables and local variables that are declared {\tt static}.
 
 \item The heap segment contains chunks of memory allocated
   at run time, usually by calling the C library function
   {\tt malloc}.
+
+\item The stack segment contains the run-time stack, which is
+  made up of stack frames.  Each time a function is called, a stack
+  frame is allocated to contain the 
+  parameters and local variables of the function.
 
 \end{itemize}
 
@@ -1162,17 +1170,20 @@ from one system to another, but in the most common arrangement:
 
 \begin{itemize}
 
-\item The text segment is near the ``bottom'' of memory; that is
+\item The text segment is near the ``bottom'' of memory, that is,
   at addresses near 0.
 
-\item The static segment is often just above the text segment.
+\item The static segment is often just above the text segment, that is,
+at higher addresses.
 
-\item The stack is near the top of memory; that is, near the
-  highest addresses in the virtual address space.  As the
-  stack expands, it grows down toward smaller addresses.
+\item The global segment is often just above the static segment.
 
 \item The heap is often above the static segment.  As it expands,
   it grows up toward larger addresses.
+  
+\item The stack is near the top of memory; that is, near the
+  highest addresses in the virtual address space.  As the
+  stack expands, it grows down toward smaller addresses.
 
 \end{itemize}
 
@@ -1190,11 +1201,13 @@ int main ()
 {
     int local = 5;
     void *p = malloc(128);
+    char *s = "Hello, World";
 
     printf ("Address of main is %p\n", main);
     printf ("Address of global is %p\n", &global);
     printf ("Address of local is %p\n", &local);
     printf ("Address of p is %p\n", p);
+    printf ("Address of s is %p\n", s);
 }
 \end{verbatim}
 
@@ -1203,28 +1216,39 @@ it refers to the address of the first machine language instruction
 in {\tt main}, which we expect to be in the text segment.
 
 {\tt global} is a global variable, so we expect it to be in the
-static segment.  {\tt local} is a local variable, so we expect it
+global segment.  {\tt local} is a local variable, so we expect it
 to be on the stack.
 
-And {\tt p} contains an address returned by {\tt malloc}, which allocates
+{\tt s} refers to a ``string literal", which is a string that appears
+as part of the program (as opposed to a string that is read from a file,
+input by a user, etc.).  We expect the location of the string to be
+in the static segment (as opposed to the pointer, {\tt s}, which is
+a local variable).
+
+{\tt p} contains an address returned by {\tt malloc}, which allocates
 space in the heap.  ``malloc'' stands for ``memory allocate.''
 
 The format sequence \verb"%p" tells {\tt printf} to format each
-address as a ``pointer'', which is another name for an address.
+address as a ``pointer'', so it displays the results in hexadecimal.
 
 When I run this program, the output looks like this (I added spaces
 to make it easier to read):
 
 \begin{verbatim}
-Address of main is   0x      40057c
+Address of main is   0x      40057d
 Address of global is 0x      60104c
-Address of local is  0x7fffd26139c4
-Address of p is      0x     1c3b010
+Address of local is  0x7ffe6085443c
+p points to          0x     16c3010
+s points to          0x      4006a4
+
 \end{verbatim}
 
-As expected, the address of {\tt main} is the lowest, followed
-by {\tt global} and {\tt p}.  The address of {\tt local} is
-much bigger.  It has 12 hexadecimal digits.  Each hex digit
+As expected, the address of {\tt main} is the lowest, followed by
+the location of the string literal.  The location of
+{\tt global} is next, then the address {\tt p} points to.
+The address of {\tt local} is much bigger.
+
+The largest address has 12 hexadecimal digits.  Each hex digit
 corresponds to 4 bits, so it is a 48-bit address.  That suggests
 that the usable part of the virtual address space is $2^{48}$ bytes.
 
@@ -1252,9 +1276,9 @@ it has been called.
 \begin{verbatim}
 int times_called()
 {
-  static int counter = 0;
-  counter++;
-  return counter;
+    static int counter = 0;
+    counter++;
+    return counter;
 }
 \end{verbatim}
 
@@ -1289,8 +1313,7 @@ the offset.  A ``page'' is a chunk of memory; the size of a page
 depends on the operating system and the hardware, but common sizes
 are 1--4 KiB.
 
-\item The MMU looks up the page number in the ``page table'' and gets
-the corresponding physical page number.  Then it combines
+\item The MMU looks up the page number in the translation lookaside buffer (TLB) and gets the corresponding physical page number.  Then it combines
 the physical page number with the offset to produce a PA.
 
 \item The PA is passed to main memory, which reads or writes the given
@@ -1298,8 +1321,9 @@ location.
 
 \end{enumerate}
 
-As an example, suppose that the VA is 32 bits and the physical memory
-is 1 GiB, divided into 1 KiB pages.
+The TLB contains caches copies of data from the page table (which is stored in kernel memory).  The page table contains the mapping from virtual page numbers to physical page numbers.  Since each process has its own page table, the TLB has to make sure it only uses entries from the page table of the process that's running.
+
+To see how all this works, suppose that the VA is 32 bits and the physical memory is 1 GiB, divided into 1 KiB pages.
 
 \begin{itemize}
 
@@ -1335,7 +1359,7 @@ And since we need a page table for each process, a system running
 And that's just with 32-bit virtual addresses.  With 48- or 64-bit
 VAs, the numbers are ridiculous.
 
-Fortunately, nothing like that much space is actually needed, because
+Fortunately, we don't actually need that much space, because
 most processes don't use even a small fraction of their
 virtual address space.  And if a process doesn't use a virtual
 page, we don't need an entry in the page table for it.
@@ -1346,12 +1370,9 @@ table entries, is a bad idea.  Fortunately, there are several
 good implementations for sparse arrays.
 
 One option is a multilevel page table, which is what many operating
-systems, including Linux, use.  Another
-option is an associative table, where each entry includes both
-the virtual page number and the physical page number.  Searching
-an associative table can be slow in software, but in hardware we
+systems, including Linux, use.  Another option is an associative table, where each entry includes both the virtual page number and the physical page number.  Searching an associative table can be slow in software, but in hardware we
 can search the entire table in parallel, so associative arrays are
-often used to represent pages tables in the MMU.
+often used to represent the page table entries in the TLB.
 
 You can read more about these implementations at
 \url{http://en.wikipedia.org/wiki/Page_table}; you might find the
@@ -1508,7 +1529,8 @@ in blocks.
 \newcommand{\mus}{$\mu$s~}
 
 I mentioned earlier that disk drives are slow.  On current HDDs, the
-time to read a block from disk to memory is typically 2--6 ms.
+average time to read a block from disk to memory might be 5--25 ms
+(see \url{https://en.wikipedia.org/wiki/Hard_disk_drive_performance_characteristics}).
 SSDs are faster, taking 25 \mus to read a 4 KiB block and 250 \mus to
 write one (see \url{http://en.wikipedia.org/wiki/Ssd#Controller}).
 
@@ -1520,11 +1542,11 @@ instruction per clock cycle, it would complete 200 instructions
 while waiting for a byte from memory.
 
 In one microsecond, it would complete 2000 instructions,
-so while waiting for a byte from an SSD, it would complete 50,000.
+so while waiting 25 \mus for a byte from an SSD, it would complete 50,000.
 
 In one millisecond, it would complete 2,000,000 instructions,
-so while waiting for a byte from a HDD, it might complete
-10 million.  If there's nothing for the CPU to do while it waits,
+so while waiting 20 ms for a byte from a HDD, it might complete
+40 million.  If there's nothing for the CPU to do while it waits,
 it would be idle.  That's why the operating system generally
 switches to another process while it is waiting for data from disk.
 
@@ -1536,9 +1558,9 @@ this gap:
 \begin{itemize}
 
 \item Block transfers: The time it takes to load a single byte from
-  disk is about 5 ms.  By comparison, the additional time to load an 8
-  KiB block is negligible.  If the processor does 5 ms of work on
-  each block, it might be possible to keep the processor busy.
+  disk is 5--25 ms.  By comparison, the additional time to load an 8
+  KiB block is negligible.  So systems generally try to read large
+  blocks each time they access the disk.
 
 \item Prefetching: Sometimes the operating system can predict that a
   process will read a block and start loading it before it is
@@ -1591,15 +1613,15 @@ data about data, hence ``meta''.)
 
 Since inodes reside on disk along with the rest of the data, they are
 designed to fit neatly into disk blocks.  A UNIX inode contains
-information about the file including: the user ID of the file owner,
+information about a file, including the user ID of the file owner;
 permission flags indicating who is allowed to read, write, or execute
-it, and timestamps that indicate when it was last modified and
+it; and timestamps that indicate when it was last modified and
 accessed.  In addition, it contains block numbers for the first 12
 blocks that make up the file.
 
 If the block size is 8 KiB, the first 12 blocks make up 96 KiB.
 On most systems, that's big enough for a large majority of files,
-but it's obviously not big enough for all of them.  That's
+but it's definitely not big enough for all of them.  That's
 why the inode also contains a pointer to an ``indirection block'',
 which contains nothing but pointers to other blocks.
 
@@ -1657,7 +1679,7 @@ The goals of the block allocation system are:
 
 It is hard to design a file system that achieves all of these
 goals, especially since file system performance depends on
-``workload characteristics'' including file sizes, access
+``workload characteristics'' like file sizes, access
 patterns, etc.  A file system that is well tuned for one workload
 might not perform as well for another.
 
@@ -1841,7 +1863,7 @@ the coefficient, $c$.  The value of a floating-point number is
 %
 \[ (-1)^s c \cdot 2^q \]
 %
-Well, that's almost correct, but there is one more wrinkle.
+Well, that's almost correct, but there's one more wrinkle.
 Floating-point numbers are usually normalized so that there is
 one digit before the point.  For example, in base 10, we prefer
 $2.998 \cdot 10^8$ rather than $2998 \cdot 10^5$ or any other
@@ -1855,7 +1877,7 @@ In floating point, that's $1.101 \cdot 2^3$, so the exponent
 is 3 and the part of the coefficient that would be stored
 is 101 (followed by 20 zeros).
 
-Well, that's almost correct.  There's one more wrinkle.
+Well, that's almost correct, but there's one more wrinkle.
 The exponent is stored with a ``bias''.  In the 32-bit standard,
 the bias is 127, so the exponent 3 would be stored as 130.
 
@@ -1897,8 +1919,7 @@ rightmost 8 bits (the hexadecimal value {\tt 0xff} has eight 1's).
 To get the coefficient, we need to extract the 23 rightmost bits
 and ignore the rest.  We do that by making a mask with 1s in the
 23 rightmost places and 0s on the left.  The easiest way to do that
-is by shifting 1
-to the left by 23 places and then subtracting 1.  
+is by shifting 1 to the left by 23 places and then subtracting 1.  
 
 The output of this program is:
 %
@@ -2006,7 +2027,7 @@ Related issues sometimes come up with strings.  First, remember
 that C strings are null-terminated.  When you allocate space
 for a string, don't forget the extra byte at the end.
 
-Also, remember that the letters {\it and numbers} in C strings are
+Also, the letters {\it and numbers} in C strings are
 encoded in ASCII.  The ASCII codes for the digits ``0'' through ``9''
 are 48 through 57, {\it not} 0 through 9.  The ASCII code 0 is the NUL
 character that marks the end of a string.  And the ASCII codes 1

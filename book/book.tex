@@ -1321,7 +1321,7 @@ location.
 
 \end{enumerate}
 
-The TLB contains caches copies of data from the page table (which is stored in kernel memory).  The page table contains the mapping from virtual page numbers to physical page numbers.  Since each process has its own page table, the TLB has to make sure it only uses entries from the page table of the process that's running.
+The TLB contains cached copies of data from the page table (which is stored in kernel memory).  The page table contains the mapping from virtual page numbers to physical page numbers.  Since each process has its own page table, the TLB has to make sure it only uses entries from the page table of the process that's running.
 
 To see how all this works, suppose that the VA is 32 bits and the physical memory is 1 GiB, divided into 1 KiB pages.
 

@@ -39,7 +39,7 @@
 \author{Allen B. Downey}
 
 \newcommand{\thetitle}{Think OS: A Brief Introduction to Operating Systems}
-\newcommand{\theversion}{0.7}
+\newcommand{\theversion}{0.7.1}
 
 % these styles get translated in CSS for the HTML version
 \newstyle{a:link}{color:black;}
@@ -396,6 +396,9 @@ Jim Tyson, Donald Robertson, Jeremy Vermast, Yuzhong Huang, Ian Hill.
 
 \clearemptydoublepage
 
+% inline syntax formatting
+\newcommand{\vb}{\verb}%}
+
 \end{latexonly}
 
 % START THE BOOK
@@ -493,7 +496,7 @@ interpreter:
 
 This shows that the name of the variable is stored in memory while
 the program is running (along with some other values that are part
-of the default run-time environment).
+of the default runtime environment).
 
 In compiled languages, variable names exist at compile-time but not at
 run time.  The compiler chooses a location for each variable and
@@ -739,8 +742,8 @@ collect2: error: ld returned 1 exit status
 is another step in the compilation process that is closely related
 to linking.
 
-Once the program starts, C does very little run-time checking,
-so there are only a few run-time errors you are likely to see.  If you
+Once the program starts, C does very little runtime checking,
+so there are only a few runtime errors you are likely to see.  If you
 divide by zero, or perform another illegal floating-point operation, you
 will get a ``Floating point exception.''  And if you try to read or
 write an incorrect location in memory, you will get a ``Segmentation
@@ -842,7 +845,7 @@ following data:
   machine language instructions.
 
 \item Data associated with the program, including static data (allocated
-  at compile time) and dynamic data including the run-time stack and
+  at compile time) and dynamic data including the call stack and
   the heap.
 
 \item The state of any pending input/output operations.  For example,
@@ -1093,7 +1096,7 @@ physical ``address space.''  It
 usually runs from 0 to $N-1$, where $N$ is
 the size of main memory.  On a system with 1 GiB of physical memory,
 the highest valid address is $2^{30}-1$, which is 1,073,741,823 in
-decimal, or 0x3fff ffff in hexadecimal (the prefix 0x indicates a
+decimal, or 0x03ff ffff in hexadecimal (the prefix 0x indicates a
 hexadecimal number).
 
 However, most operating systems provide ``virtual memory,'' which
@@ -1135,11 +1138,7 @@ allocated to another process.
 
 \section{Memory segments}
 
-%TODO: make this section consistent with Head First C
-
-% Also, fix header.html add padding.
-
-The data of a running process is organized into 5 segments:
+The data of a running process is organized into five segments:
 
 \begin{itemize}
 
@@ -1148,7 +1147,7 @@ The data of a running process is organized into 5 segments:
 
 \item The static segment contains immutable values, like string
 literals.  For example, if your program contains the string
-{\tt "Hello, World"}, those character will be stored in the
+{\tt "Hello, World"}, those characters will be stored in the
 static segment.
 
 \item The globals segment contains global variables and local variables that are declared {\tt static}.
@@ -1157,10 +1156,11 @@ static segment.
   at run time, usually by calling the C library function
   {\tt malloc}.
 
-\item The stack segment contains the run-time stack, which is
-  made up of stack frames.  Each time a function is called, a stack
+\item The stack segment contains the call stack, which is a
+  sequence of stack frames.  Each time a function is called, a stack
   frame is allocated to contain the 
-  parameters and local variables of the function.
+  parameters and local variables of the function.  When the function
+  completes, its stack frame is removed from the stack.
 
 \end{itemize}
 
@@ -1187,6 +1187,9 @@ at higher addresses.
 
 \end{itemize}
 
+%TODO: Figure out how to handle the code that is in both ExercisesInC
+% and the repo for the book.
+
 To determine the layout of these segments on your system, try running
 this program, which is in {\tt aspace.c} in the repository for this
 book (see Section~\ref{code}).
@@ -1206,8 +1209,8 @@ int main ()
     printf ("Address of main is %p\n", main);
     printf ("Address of global is %p\n", &global);
     printf ("Address of local is %p\n", &local);
-    printf ("Address of p is %p\n", p);
-    printf ("Address of s is %p\n", s);
+    printf ("p points to %p\n", p);
+    printf ("s points to %p\n", s);
 }
 \end{verbatim}
 
@@ -2087,38 +2090,36 @@ the special pointer value NULL.
 
 \item {\tt calloc}, which is the same as {\tt malloc} except that
 it also clears the newly allocated chunk; that
-is, sets all bytes in the chunk to 0.
+is, it sets all bytes in the chunk to 0.
 
 \item {\tt free}, which takes a pointer to a previously allocated
-chunk and deallocates it; that is, makes the space available for
+chunk and deallocates it; that is, it makes the space available for
 future allocation.
 
 \item {\tt realloc}, which takes a pointer to a previously allocated
 chunk and a new size.  It allocates a chunk of memory with the new
 size, copies data from the old chunk to the new, frees the old chunk,
-and returns a pointer
-to the new chunk.
+and returns a pointer to the new chunk.
 
 \end{itemize}
 
 This API is notoriously error-prone and unforgiving.  Memory management
 is one of the most challenging parts of designing large software systems,
-which is why most modern language provide higher-level memory
+which is why most modern languages provide higher-level memory
 management features like garbage collection.
 
 
 \section{Memory errors}
 
 The C memory management API is a bit like Jasper Beardly, a minor
-character on the animated television program {\it The Simpsons}, 
-who appears as a strict substitute teacher who imposes corporal
-punishment, a ``paddlin''', for all infractions.
+character on the animated television program {\it The Simpsons}; 
+in a few episodes, he appears as a strict substitute teacher who imposes corporal punishment --- a ``paddlin''' --- for all infractions.
 
 Here are some of things a program can do that deserve a paddling:
 
 \begin{itemize}
 
-\item If you access any chunk that has not been
+\item If you access (read or write) any chunk that has not been
 allocated, that's a paddling.
 
 \item If you free an allocated chunk and then access it, that's
@@ -2148,8 +2149,8 @@ of the program, which is difficult and contrary to fundamental
 principles of good software engineering.
 
 Ideally, every function that allocates memory should include, as part
-of the documented interface, information about how that memory should
-be freed.  Mature libraries often do this well, but in the real world,
+of the documented interface, information about how that memory is supposed
+to be freed.  Mature libraries often do this well, but in the real world,
 software engineering practice often falls short of this ideal.
 
 To make matters worse, memory errors can be difficult
@@ -2157,24 +2158,11 @@ to find because the symptoms are unpredictable.  For example:
 
 \begin{itemize}
 
-\item If you read a value from an unallocated chunk, the system {\em
-  might} detect the error, trigger a run-time error called a
-  ``segmentation fault'', and stop the program.  This outcome is
-  desirable, because it indicates the location in the program that
-  caused the error.  But, sadly, this outcome is {\em rare}.  More
-  often, the program reads unallocated memory without detecting the
-  error, and the value it gets is whatever happened to be stored at a
-  particular location.  If the value is not interpreted as the right
-  type, the results might be hard to interpret.  For example, if you
-  read bytes from a string and interpret them as a floating-point
-  value, you might get an invalid number or a number that is
-  extremely large or small.  If you pass that value to a function that
-  isn't prepared to handle it, the results can be bizarre.
+\item If you read a value from an unallocated chunk, the system {\em might} detect the error, trigger a runtime error called a ``segmentation fault'', and stop the program.  Or, the program might read unallocated memory without detecting the error; in that case, the value it gets is whatever happened to be stored at the accessed location, which is unpredictable, and might be different each time the program runs.
 
-\item If you write a value to an unallocated chunk, things are even
-  worse, because after the bad value is written, a long time might
-  pass before it is read and causes problems.  At that point it will
-  be very difficult to find the source of the problem.
+\item If you write a value to an unallocated chunk, and don't get a segmentation fault, things are even worse.  After you write a value to an invalid location, a long time might pass before it is read and causes problems.  At that point it will be very difficult to find the source of the problem.
+
+\end{itemize} 
 
 And things can be even worse than that!  One of the most common
 problems with C-style memory management is that the data structures
@@ -2184,8 +2172,6 @@ accidentally write past the end of a dynamically-allocated chunk, you
 are likely to mangle these data structures.  The system usually won't
 detect the problem until later, when you call {\tt malloc} or
 {\tt free}, and those functions fail in some inscrutable way.
-
-\end{itemize} 
 
 One conclusion you should draw from this is that safe memory
 management requires design and discipline.  If you write a library
@@ -2200,7 +2186,7 @@ functions and not, for example, call {\tt free} on a chunk you did not
 {\tt malloc}.  And you should avoid keeping multiple references to the
 same chunk in different parts of your program.
 
-Often there is a tradeoff between safe memory management and performance.
+Often there is a trade-off between safe memory management and performance.
 For example, the most common source of memory errors is writing 
 beyond the bounds of an array.  The obvious remedy for this problem
 is bounds checking; that is, every access to the array should check
@@ -2214,7 +2200,7 @@ and most low-level libraries do not.
 
 There is one more memory error that may or may not deserve a paddling.
 If you allocate a chunk of memory and never free it, that's a ``memory
-leak.''
+leak''.
 
 For some programs, memory leaks are ok.  For example, if your program
 allocates memory, performs computations on it, and then exits, it is
@@ -2254,11 +2240,11 @@ For this reason, it is considered good style to check the result from
 this after every {\tt malloc} call:
 
 \begin{verbatim}
-  void *p = malloc(size);
-  if (p == NULL) {
+void *p = malloc(size);
+if (p == NULL) {
     perror("malloc failed");
     exit(-1);
-  }
+}
 \end{verbatim}
 
 {\tt perror} is declared in {\tt stdio.h}; it prints
@@ -2267,12 +2253,12 @@ that occurred.
 
 {\tt exit}, which is declared in {\tt stdlib.h}, causes the process
 to terminate.  The argument is a status code that indicates how
-the process terminates.  By convention, status code 0 indicates normal
+the process terminated.  By convention, status code 0 indicates normal
 termination and -1 indicates an error condition.  Sometimes other
 codes are used to indicate different error conditions.
 
-Error-checking code can be a nuisance and it makes programs
-harder to read.  But you can mitigate the problem by wrapping library
+Error-checking code can be a nuisance, and it makes programs
+harder to read.  You can mitigate these problems by wrapping library
 function calls and their error-checking code in your own
 functions.  For example, here is a {\tt malloc} wrapper that checks
 the return value.
@@ -2280,12 +2266,12 @@ the return value.
 \begin{verbatim}
 void *check_malloc(int size)
 {
-  void *p = malloc (size);
-  if (p == NULL) {
-    perror("malloc failed");
-    exit(-1);
-  }
-  return p;
+    void *p = malloc (size);
+    if (p == NULL) {
+        perror("malloc failed");
+        exit(-1);
+    }
+    return p;
 }
 \end{verbatim}
 
@@ -2314,7 +2300,7 @@ from the system.  The function that does that is {\tt sbrk},
 which sets the ``program break'', which you can think of as a pointer
 to the end of the heap.
 
-When {\tt sbrk} is called, it allocates new pages of physical
+When {\tt sbrk} is called, the OS allocates new pages of physical
 memory, updates the process's page table, and sets the program
 break.
 
@@ -2323,7 +2309,8 @@ In theory, a program could call {\tt sbrk} directly (without using
 to use and, for most memory-use patterns, it runs fast and uses memory
 efficiently.
 
-To implement the memory management API,
+To implement the memory management API (that is, the functions
+{\tt malloc}, {\tt free}, {\tt calloc}, and {\tt realloc}),
 most Linux systems use {\tt ptmalloc},
 which is based on {\tt dlmalloc}, written by Doug Lea.  A short paper
 that describes key elements of the implementation is
@@ -2351,7 +2338,7 @@ case, the run time depends on the size of the old chunk.
   data are called ``boundary tags''.  Using these tags, {\tt malloc}
   can get from any chunk to the previous chunk and the next chunk in
   memory.  In addition, free chunks are chained into a doubly-linked
-  list, so each chunk contains pointers to the next and previous
+  list; each free chunk contains pointers to the next and previous
   chunks in the ``free list''.
 
 The boundary tags and free list pointers make up {\tt malloc}'s
@@ -2372,7 +2359,7 @@ program data, so it is easy for a program error to damage them.
 
 \item Binning and caching: The free list is sorted by size into bins,
   so when {\tt malloc} searches for a chunk with a particular size, it
-  knows what bin to search in.  So if you free a chunk and then
+  knows what bin to search in.  If you free a chunk and then
   immediately allocate a chunk with the same size, {\tt malloc} will
   usually be fast.
 
@@ -2380,6 +2367,8 @@ program data, so it is easy for a program error to damage them.
 
 
 \chapter{Caching}
+
+%TODO: move this model of computer hardware to Chapter 1
 
 \section{How programs run}
 
@@ -2466,19 +2455,14 @@ typical program load or store data.  And therein
 lies one of the fundamental problems of computer architecture: the
 ``memory bottleneck''.
 
-In current desktop computers, a typical CPU runs at 2 GHz, which means
-that it initiates a new instruction every 0.5 ns.  But the time it
-takes to transfer data to and from memory is about 10 ns.  If the CPU
-has to wait 10 ns to fetch the next instruction, and another 10 ns to
-load data, it would take 40 clock cycles to complete one instruction.
+In current computers, a typical core is capable of executing an instruction in less than 1 ns.  But the time it takes to transfer data to and from memory is about 10 ns.  If the CPU has to wait 10 ns to fetch the next instruction, and another 10 ns to load data, it would complete instructions 20 times slower than what's theoretically possible.  For many computations, memory is the speed limiting factor, not the CPU.
 
 
 \section{Cache performance}
 
 The solution to this problem, or at least a partial solution, is
-caching.  A ``cache'' is a small, fast memory on the same chip
-as the CPU.  In current computers, a cache might be 1--2 MiB, and
-the access time might be 1--2 ns.
+caching.  A ``cache'' is a small, fast memory that is physically close
+to the CPU, usually on the same chip.  In current computers, a cache might be 1--2 MiB, and the access time might be 1--2 ns.
 
 When the CPU loads a value from memory, it stores a copy in the cache.
 If the same value is loaded again, the CPU gets the cached copy
@@ -2489,8 +2473,7 @@ new in, we have to kick something out.  So if the CPU loads a value
 and then loads it again much later, it might not be in cache any more.
 
 The performance of many programs is limited by the effectiveness
-of the cache.  If the data needed by the CPU are usually in cache,
-the program can run at the full speed of the CPU.  If the CPU
+of the cache.  If the instructions and data needed by the CPU are usually in cache, the program can run close to the full speed of the CPU.  If the CPU
 frequently needs data that are not in cache, the program is
 limited by the speed of memory.
 
@@ -2524,10 +2507,11 @@ As an example, suppose the block size is 64 B;
 you read a string with length 64, and the first
 byte of the string happens to fall at the beginning of a block.  When
 you load the first byte, you incur a miss penalty, but
-after that the rest of the string would be in cache.  After
-reading the whole string, the hit rate would be 63/64.
+after that the rest of the string will be in cache.  After
+reading the whole string, the hit rate will be 63/64, about 98\%.
 If the string spans two blocks, you would incur 2 miss penalties.  But
-even then the hit rate would be 62/64, or almost 97\%.
+even then the hit rate would be 62/64, or almost 97\%.  If you then
+read the same string again, the hit rate would be 100\%.
 
 On the other hand, if the program jumps around unpredictably,
 reading data from scattered locations in memory, and seldom
@@ -2580,7 +2564,7 @@ My modified version of this program is in the {\tt cache} directory
 of the repository for this
 book (see Section~\ref{code}).
 
-The kernel of the program is this loop:
+The important part of the program is this loop:
 
 \begin{verbatim}
     iters = 0;
@@ -2704,7 +2688,7 @@ MiB.
 
 When the stride is 8, 16, or 32 B, cache performance is good.  At 64 B
 it starts to degrade, and for larger strides the average miss
-penalty is about 9 ns.  We can infer that the block size is 128 B.
+penalty is about 9 ns.  We can infer that the block size near 128 B.
 
 Many processors use ``multi-level caches'' that include a small,
 fast cache and a bigger, slower cache.  In this example, it looks 
@@ -2769,13 +2753,11 @@ Also main memory is usually packaged in a dual in-line memory module
 (DIMM) that includes 16 or more chips.  Several small chips are cheaper
 than one big one.
 
-The tradeoff between speed, size, and cost is the fundamental reason
+The trade-off between speed, size, and cost is the fundamental reason
 for caching.  If there were one memory technology that was fast,
 big, and cheap, we wouldn't need anything else.
 
-The same principle applies to storage as well as memory.  Flash drives
-are fast, but they are more expensive than hard drives, so they tend to
-be smaller.  Tape drives are even slower than hard
+The same principle applies to storage as well as memory.  Solid state drives (SSD) are fast, but they are more expensive than hard drives (HDD), so they tend to be smaller.  Tape drives are even slower than hard
 drives, but they can store large amounts of data relatively
 cheaply.
 
@@ -2843,14 +2825,14 @@ four fundamental questions of caching:
 \item What gets moved?  In general, block sizes are small at the top
   of the hierarchy and bigger at the bottom.  In a memory cache, a
   typical block size is 128 B.  Pages in memory might be 4 KiB, but
-  when the operating system reads a file from disk, it might read 10
-  or 100 blocks at a time.
+  when the operating system reads a file from disk, it might read 10s
+  or 100s of blocks at a time.
 
 \item When does data get moved?  In the most basic cache, data gets
   moved into cache when it is used for the first time.  But many
   caches use some kind of ``prefetching'', meaning that data is
-  loaded before it is explicitly requested.  We have already seen a
-  simple form of prefetching: loading an entire block when only part of
+  loaded before it is explicitly requested.  We have already seen
+  one form of prefetching: loading an entire block when only part of
   it is requested.
 
 \item Where in the cache does the data go?  When the cache is full, we
@@ -2888,7 +2870,7 @@ Here's how the process works:
 
 \begin{enumerate}
 
-\item Process A calls {\tt malloc} to allocate a chunk.  If there
+\item Suppose Process A calls {\tt malloc} to allocate a chunk.  If there
 is no free space in the heap with the requested size, {\tt malloc} calls
 {\tt sbrk} to ask the operating system for more memory.
 
@@ -2897,7 +2879,7 @@ adds it to the page table for Process A, creating a new range of valid
 virtual addresses.
 
 \item If there are no free pages, the paging system chooses a ``victim
-page'' belonging to Process B.  It copies the contents of the
+page'' belonging to Process B.  It copies the contents of the victim
 page from memory to disk, then it modifies the page table for Process
 B to indicate that this page is ``swapped out''.
 
@@ -2906,13 +2888,11 @@ to Process A.  To prevent Process A from reading Process B's data, the
 page should be cleared.
 
 \item At this point the call to {\tt sbrk} can return, giving {\tt malloc}
-additional space in the heap.  Then {\tt malloc} allocates the request
+additional space in the heap.  Then {\tt malloc} allocates the requested
 chunk and returns.  Process A can resume.
 
 \item When Process A completes, or is interrupted, the scheduler might
-allow Process B to resume.  When it accesses a page that has been swapped
-out, the memory management unit notices that the page is ``invalid'' and
-causes an interrupt.
+allow Process B to resume.  When Process B accesses a page that has been swapped out, the memory management unit notices that the page is ``invalid'' and causes an interrupt.
 
 \item When the operating system handles the interrupt, it sees that
 the page is swapped out, so it transfers the page back from disk to
@@ -2945,8 +2925,7 @@ Here's why:
   at a time.  The inactive processes can be swapped out.
 
 \item Also, there might be many processes running the same program.
-  These processes can share the same text segment, avoiding the need
-  to keep multiple copies in physical memory.
+  These processes can share the same text and static segments, avoiding the need to keep multiple copies in physical memory.
 
 \end{itemize}
 
@@ -2968,7 +2947,7 @@ many processes using too much space, they start to interfere with each
 other.  When Process A runs, it evicts the pages Process B needs.
 Then when B runs, it evicts the pages A needs.  When this happens,
 both processes slow to a crawl and the system can become unresponsive.
-This regrettable scenario is called ``thrashing''.
+This scenario is called ``thrashing''.
 
 In theory, operating systems could avoid thrashing by detecting an
 increase in paging and blocking or killing processes until the system
@@ -2997,20 +2976,22 @@ handle interrupts.  An ``interrupt'' is an event that stops the
 normal instruction cycle and causes the flow of execution to jump to a
 special section of code called an ``interrupt handler''.
 
-A hardware interrupt is caused when a device sends a signal to the
+%TODO: put new vocab in bold and add glossaries
+
+A {\bf hardware interrupt} is caused when a device sends a signal to the
 CPU.  For example, a network interface might cause an interrupt when
 a packet of data arrives, or a disk drive might cause an interrupt
 when a data transfer is complete.  Most systems also have timers that
-cause interrupts at regular intervals.
+cause interrupts at regular intervals, or after an elapsed time.
 
-A software interrupt is caused by a running program.  For example, if
+A {\bf software interrupt} is caused by a running program.  For example, if
 an instruction cannot complete for some reason, it might trigger an
 interrupt so the condition can be handled by the operating system.
-Some floating-point errors, like division by zero, can be handled
+Some floating-point errors, like division by zero, are handled
 using interrupts.
 
 When a program needs to access a hardware device,
-it makes a ``system call'', which is similar to a function call,
+it makes a {\bf system call}, which is similar to a function call,
 except that instead of jumping to the beginning of the function,
 it executes a special instruction that triggers an interrupt, causing
 the flow of execution to jump to the kernel.  The kernel reads the
@@ -3022,7 +3003,8 @@ and then resumes the interrupted process.
 
 Handling interrupts requires cooperation between hardware and
 software.  When an interrupt occurs, there might be several
-instructions running on the CPU and data stored in registers.
+instructions running on the CPU, data stored in registers, and
+other {\bf hardware state}.
 
 Usually the hardware is responsible for bringing the CPU
 to a consistent state; for example, every instruction should either
@@ -3032,10 +3014,8 @@ saving the program counter (PC), so the kernel knows where to
 resume.
 
 Then, usually, it is the responsibility of the interrupt handler
-to save the contents of the registers.  In order to do its job, the
-kernel needs to execute instructions, which modify data registers and 
-the flag register.  So this ``hardware state'' needs to be saved
-before it gets modified, and then restored before the interrupted
+to save the rest of the hardware state before it does anything that
+might modify it, and then restore the saved state before the interrupted
 process resumes.
 
 Here is an outline of this sequence of events:
@@ -3047,7 +3027,7 @@ counter in a special register and jumps to the appropriate interrupt
 handler.
 
 \item The interrupt handler stores the program counter and the
-flag register in memory, along with the contents of any data
+status register in memory, along with the contents of any data
 registers it plans to use.
 
 \item The interrupt handler runs whatever code is needed to handle
@@ -3060,8 +3040,8 @@ has the effect of jumping back to the interrupted instruction.
 \end{enumerate}
 
 If this mechanism works correctly, there is generally no way for
-the interrupted process to know there was an interruption, unless
-it detects small changes in the time between instructions.
+the interrupted process to know there was an interrupt, unless
+it detects the change in time between instructions.
 
 
 \section{Context switching}
@@ -3114,8 +3094,7 @@ information that has not been read yet.
 
 \end{itemize}
 
-Here are the events that cause a process to transition from
-one state to another:
+Here are the events that cause a process to transition from one state to another:
 
 \begin{itemize}
 
@@ -3129,17 +3108,17 @@ one state to another:
   changes from ready to running.
 
 \item When a process is interrupted and the scheduler chooses not
-  to let it resume, its state
-  changes from running to ready.
+  to let it resume, its state changes from running to ready.
 
 \item If a process executes a system call that cannot complete
   immediately, like a disk request, it becomes blocked
-  and the scheduler chooses another process.
+  and the scheduler usually chooses another process.
 
 \item When an operation like a disk request completes, it causes an
   interrupt.  The interrupt handler figures out which process was
   waiting for the request and switches its state from
-  blocked to ready.
+  blocked to ready.  Then the scheduler may or may not choose to
+  resume the unblocked process.
 
 \item When a process calls {\tt exit}, the interrupt handler stores
   the exit code in the PCB and changes the process's state to done.
@@ -3284,7 +3263,7 @@ is a kind of process.  Now I will provide a more careful explanation.
 When you create a process, the operating system creates a new address
 space, which includes the text segment, static segment, and heap; it
 also creates a new ``thread of execution'', which includes the program
-counter and other hardware state, and the run-time stack.
+counter and other hardware state, and the call stack.
 
 The processes we have seen so far are ``single-threaded'', which means
 that only one thread of execution runs in each address space.  In this
@@ -3300,8 +3279,8 @@ global variable, other threads see the change.  They also share the heap,
 so threads can share dynamically-allocated chunks.
 
 But each thread has its own stack, so threads can call functions without
-interfering with each other.  And usually threads can't access each
-other's local variables.
+interfering with each other.  Usually threads don't access each
+other's local variables (and sometimes they can't).
 
 The example code for this chapter is in the repository for this book,
 in a directory named {\tt counter}.  For information on downloading
@@ -3310,11 +3289,7 @@ this code, see Section~\ref{code}.
 
 \section{Creating threads}
 
-The most popular threading standard used with C is
-POSIX Threads, or Pthreads for short.  The POSIX standard defines
-a thread model and an interface for creating and controlling
-threads.  Most versions of UNIX provide an implementation of
-Pthreads.
+The most popular threading standard used with C is POSIX Threads, or Pthreads for short.  The POSIX standard defines a thread model and an interface for creating and controlling threads.  Most versions of UNIX provide an implementation of Pthreads.
 
 Using Pthreads is like using most C libraries:
 
@@ -3325,8 +3300,7 @@ program.
 
 \item You write code that calls functions defined by Pthreads.
 
-\item When you compile the program, you link it with the
-Pthread library.
+\item When you compile the program, you link it with the Pthread library.
 
 \end{itemize}
 
@@ -3340,10 +3314,7 @@ For my examples, I include the following headers:
 \end{verbatim}
 
 The first two are standard; the third is for Pthreads and
-the fourth is for semaphores.
-To compile with the Pthread library in {\tt gcc}, you
-can use the {\tt -l}
-option on the command line:
+the fourth is for semaphores.  To compile with the Pthread library in {\tt gcc}, you can use the {\tt -l} option on the command line:
 
 \begin{verbatim}
 gcc -g -O2 -o array array.c -lpthread
@@ -3362,22 +3333,25 @@ The following function shows how to use it:
 \begin{verbatim}
 pthread_t make_thread(void *(*entry)(void *), Shared *shared)
 {
-  int n;
-  pthread_t thread;
+    int n;
+    pthread_t thread;
 
-  n = pthread_create(&thread, NULL, entry, (void *)shared);
-  if (n != 0) {
-    perror("pthread_create failed");
-    exit(-1);
-  }
-  return thread;
+    n = pthread_create(&thread, NULL, entry, (void *)shared);
+    if (n != 0) {
+        perror("pthread_create failed");
+        exit(-1);
+    }
+    return thread;
 }
 \end{verbatim}
 
 \verb"make_thread" is a wrapper I wrote to make
 \verb"pthread_create" easier to use, and to provide error-checking.
 
-The return type from {\tt pthread\_create} is {\tt pthread\_t},
+%TODO: Define a newcommand like \py to make verb easier to use, and
+% get rid of the \_ hockey sticks
+
+The return type from \verb"pthread_create" is \verb"pthread_t",
 which you can think of as an id or ``handle'' for the new thread.  
 
 If {\tt pthread\_create} succeeds, it returns 0 and \verb"make_thread"
@@ -3387,14 +3361,13 @@ returns an error code and \verb"make_thread" prints an error message
 and exits.
 
 The parameters of {\tt pthread\_create} take some
-explaining.  Starting with the second,
-{\tt Shared}
+explaining.  Starting with the second, {\tt Shared}
 is a structure I defined to contain values shared between threads.
 The following {\tt typedef} statement creates the new type:
 
 \begin{verbatim}
 typedef struct {
-  int counter;
+    int counter;
 } Shared;
 \end{verbatim}
 
@@ -3405,9 +3378,9 @@ space for a {\tt Shared} structure and initializes the contents:
 \begin{verbatim}
 Shared *make_shared()
 {
-  Shared *shared = check_malloc(sizeof (Shared));
-  shared->counter = 0;
-  return shared;
+    Shared *shared = check_malloc(sizeof (Shared));
+    shared->counter = 0;
+    return shared;
 }
 \end{verbatim}
 
@@ -3423,9 +3396,9 @@ function is named {\tt entry}:
 \begin{verbatim}
 void *entry(void *arg)
 {
-  Shared *shared = (Shared *) arg;
-  child_code(shared);
-  pthread_exit(NULL);
+    Shared *shared = (Shared *) arg;
+    child_code(shared);
+    pthread_exit(NULL);
 }
 \end{verbatim}
 
@@ -3440,8 +3413,8 @@ the shared counter and increments it.
 \begin{verbatim}
 void child_code(Shared *shared)
 {  
-  printf("counter = %d\n", shared->counter);
-  shared->counter++;
+    printf("counter = %d\n", shared->counter);
+    shared->counter++;
 }
 \end{verbatim}
 
@@ -3453,14 +3426,14 @@ say, so we pass {\tt NULL}.
 Finally, here is the code that creates the child threads:
 
 \begin{verbatim}
-  int i;
-  pthread_t child[NUM_CHILDREN];
+    int i;
+    pthread_t child[NUM_CHILDREN];
 
-  Shared *shared = make_shared(1000000);
+    Shared *shared = make_shared(1000000);
 
-  for (i=0; i<NUM_CHILDREN; i++) {
-    child[i] = make_thread(entry, shared);
-  }
+    for (i=0; i<NUM_CHILDREN; i++) {
+        child[i] = make_thread(entry, shared);
+    }
 \end{verbatim}
 
 \verb"NUM_CHILDREN" is a compile-time constant that determines
@@ -3477,11 +3450,11 @@ Here is my wrapper for {\tt pthread\_join}:
 \begin{verbatim}
 void join_thread(pthread_t thread)
 {
-  int ret = pthread_join(thread, NULL);
-  if (ret == -1) {
-    perror("pthread_join failed");
-    exit(-1);
-  }
+    int ret = pthread_join(thread, NULL);
+    if (ret == -1) {
+      perror("pthread_join failed");
+      exit(-1);
+    }
 }
 \end{verbatim}
 
@@ -3495,9 +3468,9 @@ Continuing the example from the previous section, here's the
 code that waits on the children:
 
 \begin{verbatim}
-  for (i=0; i<NUM_CHILDREN; i++) {
-    join_thread(child[i]);
-  }
+    for (i=0; i<NUM_CHILDREN; i++) {
+        join_thread(child[i]);
+    }
 \end{verbatim}
 
 This loops waits for the children one at a time in the order they
@@ -3584,10 +3557,10 @@ threads:
 \begin{verbatim}
 void child_code(Shared *shared)
 {
-  mutex_lock(shared->mutex);
-  printf("counter = %d\n", shared->counter);
-  shared->counter++;
-  mutex_unlock(shared->mutex);
+    mutex_lock(shared->mutex);
+    printf("counter = %d\n", shared->counter);
+    shared->counter++;
+    mutex_unlock(shared->mutex);
 }
 \end{verbatim}
 
@@ -3616,8 +3589,8 @@ work, I have to add the Mutex to the Shared struct:
 
 \begin{verbatim}
 typedef struct {
-  int counter;
-  Mutex *mutex;
+    int counter;
+    Mutex *mutex;
 } Shared;
 \end{verbatim}
 
@@ -3626,10 +3599,10 @@ And initialize it in \verb"make_shared"
 \begin{verbatim}
 Shared *make_shared(int end)
 {
-  Shared *shared = check_malloc(sizeof(Shared));
-  shared->counter = 0;
-  shared->mutex = make_mutex();   //-- this line is new
-  return shared;
+    Shared *shared = check_malloc(sizeof(Shared));
+    shared->counter = 0;
+    shared->mutex = make_mutex();   //-- this line is new
+    return shared;
 }
 \end{verbatim}
 
@@ -3668,10 +3641,10 @@ initializes the mutex:
 \begin{verbatim}
 Mutex *make_mutex()
 {
-  Mutex *mutex = check_malloc(sizeof(Mutex));
-  int n = pthread_mutex_init(mutex, NULL);
-  if (n != 0) perror_exit("make_lock failed"); 
-  return mutex;
+    Mutex *mutex = check_malloc(sizeof(Mutex));
+    int n = pthread_mutex_init(mutex, NULL);
+    if (n != 0) perror_exit("make_lock failed"); 
+    return mutex;
 }
 \end{verbatim}
 
@@ -3684,14 +3657,14 @@ for POSIX functions:
 \begin{verbatim}
 void mutex_lock(Mutex *mutex)
 {
-  int n = pthread_mutex_lock(mutex);
-  if (n != 0) perror_exit("lock failed");
+    int n = pthread_mutex_lock(mutex);
+    if (n != 0) perror_exit("lock failed");
 }
 
 void mutex_unlock(Mutex *mutex)
 {
-  int n = pthread_mutex_unlock(mutex);
-  if (n != 0) perror_exit("unlock failed");
+    int n = pthread_mutex_unlock(mutex);
+    if (n != 0) perror_exit("unlock failed");
 }
 \end{verbatim}
 
@@ -3737,10 +3710,10 @@ Here's the structure definition:
 
 \begin{verbatim}
 typedef struct {
-  int *array;
-  int length;
-  int next_in;
-  int next_out;
+    int *array;
+    int length;
+    int next_in;
+    int next_out;
 } Queue;
 \end{verbatim}
 
@@ -3759,12 +3732,12 @@ the fields:
 \begin{verbatim}
 Queue *make_queue(int length)
 {
-  Queue *queue = (Queue *) malloc(sizeof(Queue));
-  queue->length = length;
-  queue->array = (int *) malloc(length * sizeof(int));
-  queue->next_in = 0;
-  queue->next_out = 0;
-  return queue;
+    Queue *queue = (Queue *) malloc(sizeof(Queue));
+    queue->length = length;
+    queue->array = (int *) malloc(length * sizeof(int));
+    queue->next_in = 0;
+    queue->next_out = 0;
+    return queue;
 }
 \end{verbatim}
 
@@ -3777,7 +3750,7 @@ that the queue is empty, so we can write:
 \begin{verbatim}
 int queue_empty(Queue *queue)
 {
-  return (queue->next_in == queue->next_out);
+    return (queue->next_in == queue->next_out);
 }
 \end{verbatim}
 
@@ -3785,12 +3758,12 @@ Now we can add elements to the queue using \verb"queue_push":
 
 \begin{verbatim}
 void queue_push(Queue *queue, int item) {
-  if (queue_full(queue)) {
-    perror_exit("queue is full");
-  }
+    if (queue_full(queue)) {
+        perror_exit("queue is full");
+    }
   
-  queue->array[queue->next_in] = item;
-  queue->next_in = queue_incr(queue, queue->next_in);
+    queue->array[queue->next_in] = item;
+    queue->next_in = queue_incr(queue, queue->next_in);
 }
 \end{verbatim}
 
@@ -3803,7 +3776,7 @@ element and then increments \verb"next_in" using \verb"queue_incr":
 \begin{verbatim}
 int queue_incr(Queue *queue, int i)
 {
-  return (i+1) % queue->length;
+    return (i+1) % queue->length;
 }
 \end{verbatim}
 
@@ -3819,7 +3792,7 @@ queue is full:
 \begin{verbatim}
 int queue_full(Queue *queue)
 {
-  return (queue_incr(queue, queue->next_in) == queue->next_out);
+    return (queue_incr(queue, queue->next_in) == queue->next_out);
 }
 \end{verbatim}
 
@@ -3833,13 +3806,13 @@ element from the queue:
 
 \begin{verbatim}
 int queue_pop(Queue *queue) {
-  if (queue_empty(queue)) {
-    perror_exit("queue is empty");
-  }
+    if (queue_empty(queue)) {
+        perror_exit("queue is empty");
+    }
   
-  int item = queue->array[queue->next_out];
-  queue->next_out = queue_incr(queue, queue->next_out);
-  return item;
+    int item = queue->array[queue->next_out];
+    queue->next_out = queue_incr(queue, queue->next_out);
+    return item;
 }
 \end{verbatim}
 
@@ -3856,14 +3829,14 @@ producer code:
 \begin{verbatim}
 void *producer_entry(void *arg)
 {
-  int i;
-  Shared *shared = (Shared *) arg;
+    int i;
+    Shared *shared = (Shared *) arg;
 
-  for (i=0; i<QUEUE_LENGTH-1; i++) {
-    printf("adding item %d\n", i);
-    queue_push(shared->queue, i);
-  }
-  pthread_exit(NULL);
+    for (i=0; i<QUEUE_LENGTH-1; i++) {
+        printf("adding item %d\n", i);
+        queue_push(shared->queue, i);
+    }
+    pthread_exit(NULL);
 }
 \end{verbatim}
 
@@ -3872,15 +3845,15 @@ Here's the consumer code:
 \begin{verbatim}
 void *consumer_entry(void *arg)
 {
-  int i;
-  int item;
-  Shared *shared = (Shared *) arg;
+    int i;
+    int item;
+    Shared *shared = (Shared *) arg;
 
-  for (i=0; i<QUEUE_LENGTH-1; i++) {
-    item = queue_pop(shared->queue);
-    printf("consuming item %d\n", item);
-  }
-  pthread_exit(NULL);
+    for (i=0; i<QUEUE_LENGTH-1; i++) {
+        item = queue_pop(shared->queue);
+        printf("consuming item %d\n", item);
+    }
+    pthread_exit(NULL);
 }
 \end{verbatim}
 
@@ -3889,31 +3862,31 @@ void *consumer_entry(void *arg)
 Here's the parent code that starts the threads and waits for them
 
 \begin{verbatim}
-  int i;
-  pthread_t child[NUM_CHILDREN];
+    int i;
+    pthread_t child[NUM_CHILDREN];
 
-  Shared *shared = make_shared();
+    Shared *shared = make_shared();
 
-  child[0] = make_thread(producer_entry, shared);
-  child[1] = make_thread(consumer_entry, shared);
+    child[0] = make_thread(producer_entry, shared);
+    child[1] = make_thread(consumer_entry, shared);
 
-  for (i=0; i<NUM_CHILDREN; i++) {
-    join_thread(child[i]);
-  }
+    for (i=0; i<NUM_CHILDREN; i++) {
+        join_thread(child[i]);
+    }
 \end{verbatim}
 
 And finally here's the shared structure that contains the queue:
 
 \begin{verbatim}
 typedef struct {
-  Queue *queue;
+    Queue *queue;
 } Shared;
 
 Shared *make_shared()
 {
-  Shared *shared = check_malloc(sizeof(Shared));
-  shared->queue = make_queue(QUEUE_LENGTH);
-  return shared;
+    Shared *shared = check_malloc(sizeof(Shared));
+    shared->queue = make_queue(QUEUE_LENGTH);
+    return shared;
 }
 \end{verbatim}
 

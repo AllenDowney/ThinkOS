@@ -1324,7 +1324,7 @@ location.
 
 \end{enumerate}
 
-The TLB contains caches copies of data from the page table (which is stored in kernel memory).  The page table contains the mapping from virtual page numbers to physical page numbers.  Since each process has its own page table, the TLB has to make sure it only uses entries from the page table of the process that's running.
+The TLB contains cached copies of data from the page table (which is stored in kernel memory).  The page table contains the mapping from virtual page numbers to physical page numbers.  Since each process has its own page table, the TLB has to make sure it only uses entries from the page table of the process that's running.
 
 To see how all this works, suppose that the VA is 32 bits and the physical memory is 1 GiB, divided into 1 KiB pages.
 
@@ -3386,7 +3386,7 @@ Shared *make_shared()
 
 Now that we have a shared data structure, let's get back to
 {\tt pthread\_create}.
-The first parameter is a pointer to a function that takes
+The third parameter is a pointer to a function that takes
 a {\tt void} pointer and returns a {\tt void} pointer.  If the syntax
 for declaring this type makes your eyes bleed, you are not alone.
 Anyway, the purpose of this parameter is to specify the function where

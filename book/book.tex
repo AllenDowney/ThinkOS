@@ -17,7 +17,6 @@
 \usepackage[T1]{fontenc}
 \usepackage{textcomp}
 \usepackage{mathpazo}
-
 %\usepackage{pslatex}
 
 \usepackage{url}
@@ -39,7 +38,7 @@
 \author{Allen B. Downey}
 
 \newcommand{\thetitle}{Think OS: A Brief Introduction to Operating Systems}
-\newcommand{\theversion}{0.7.1}
+\newcommand{\theversion}{0.7.2}
 
 % these styles get translated in CSS for the HTML version
 \newstyle{a:link}{color:black;}
@@ -2369,6 +2368,7 @@ program data, so it is easy for a program error to damage them.
 \chapter{Caching}
 
 %TODO: move this model of computer hardware to Chapter 1
+%TODO: talk about CPU modes, either here or in Chapter 1
 
 \section{How programs run}
 
@@ -2418,7 +2418,7 @@ called the ``instruction cycle'':
 in the instruction register.
 
 \item Decode: Part of the CPU, called the ``control unit'', decodes
-the instruction and send signals to the other parts of
+the instruction and sends signals to the other parts of
 the CPU.
 
 \item Execute: Signals from the control unit cause the appropriate
@@ -2455,14 +2455,18 @@ typical program load or store data.  And therein
 lies one of the fundamental problems of computer architecture: the
 ``memory bottleneck''.
 
-In current computers, a typical core is capable of executing an instruction in less than 1 ns.  But the time it takes to transfer data to and from memory is about 10 ns.  If the CPU has to wait 10 ns to fetch the next instruction, and another 10 ns to load data, it would complete instructions 20 times slower than what's theoretically possible.  For many computations, memory is the speed limiting factor, not the CPU.
+In current computers, a typical core is capable of executing an instruction in less than 1 ns.  But the time it takes to transfer data to and from memory is about 100 ns.  If the CPU has to wait 100 ns to fetch the next instruction, and another 100 ns to load data, it would complete instructions 200 times slower than what's theoretically possible.  For many computations, memory is the speed limiting factor, not the CPU.
 
 
 \section{Cache performance}
 
 The solution to this problem, or at least a partial solution, is
 caching.  A ``cache'' is a small, fast memory that is physically close
-to the CPU, usually on the same chip.  In current computers, a cache might be 1--2 MiB, and the access time might be 1--2 ns.
+to the CPU, usually on the same chip.
+
+%TODO: Clean up these paragraphs
+
+Actually, current computers typically have several levels of cache: the Level 1 cache, which is the smallest and fastests, might be 1--2 MiB with a access times near 1 ns; the Level 2 cache might have access times near 4 ns, and the Level 3 might take 16 ns.
 
 When the CPU loads a value from memory, it stores a copy in the cache.
 If the same value is loaded again, the CPU gets the cached copy

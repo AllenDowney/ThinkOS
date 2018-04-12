@@ -1177,7 +1177,7 @@ at higher addresses.
 
 \item The global segment is often just above the static segment.
 
-\item The heap is often above the static segment.  As it expands,
+\item The heap is often above the global segment.  As it expands,
   it grows up toward larger addresses.
   
 \item The stack is near the top of memory; that is, near the
@@ -1268,7 +1268,7 @@ because they are allocated automatically when a function is called,
 and freed automatically when the function returns.
 
 In C there is another kind of local variable, called ``static'',
-which is allocated in the static segment.  It is initialized when
+which is allocated in the global segment.  It is initialized when
 the program starts and keeps its value from one function call to
 the next.
 
@@ -4121,7 +4121,7 @@ After removing an item, \verb"queue_pop" unlocks the mutex, signals
 that the queue is not full, and returns.
 
 In the next section I'll show you how my Cond code works, but first I
-want to answer two frequently-asked question:
+want to answer two frequently-asked questions:
 
 \begin{itemize}
 

@@ -3697,11 +3697,11 @@ and another thread that processes user requests.  In that case,
 the GUI thread might put requests into a queue and the ``back end''
 thread might take requests out and process them.
 
-To support this organization, we need a queue implementation that
-is ``thread safe'', which means that both threads (or more than two)
-can access the queue at the same time.  And we need to handle at least
-one special case, when the queue is empty; and, if the size of the
-queue is bounded, when the queue is full.
+To support this organization, we need a queue implementation that is
+``thread safe'', which means that both threads (or more than two) can
+access the queue at the same time.  And we need to handle the special
+cases when the queue is empty and, if the size of the queue is
+bounded, when the queue is full.
 
 I'll start with a simple queue that is not thread safe, then we'll see
 what goes wrong and fix it.  The code for this example is in the
@@ -3737,7 +3737,7 @@ the fields:
 Queue *make_queue(int length)
 {
     Queue *queue = (Queue *) malloc(sizeof(Queue));
-    queue->length = length;
+    queue->length = length + 1;
     queue->array = (int *) malloc(length * sizeof(int));
     queue->next_in = 0;
     queue->next_out = 0;
@@ -3831,12 +3831,10 @@ Now let's make some threads to access this queue.  Here's the
 producer code:
 
 \begin{verbatim}
-void *producer_entry(void *arg)
-{
-    int i;
+void *producer_entry(void *arg) {
     Shared *shared = (Shared *) arg;
 
-    for (i=0; i<QUEUE_LENGTH-1; i++) {
+    for (int i=0; i<QUEUE_LENGTH-1; i++) {
         printf("adding item %d\n", i);
         queue_push(shared->queue, i);
     }
@@ -3847,13 +3845,11 @@ void *producer_entry(void *arg)
 Here's the consumer code:
 
 \begin{verbatim}
-void *consumer_entry(void *arg)
-{
-    int i;
+void *consumer_entry(void *arg) {
     int item;
     Shared *shared = (Shared *) arg;
 
-    for (i=0; i<QUEUE_LENGTH-1; i++) {
+    for (int i=0; i<QUEUE_LENGTH-1; i++) {
         item = queue_pop(shared->queue);
         printf("consuming item %d\n", item);
     }
@@ -3861,12 +3857,9 @@ void *consumer_entry(void *arg)
 }
 \end{verbatim}
 
-%TODO: switch to c99 and inline the declarations of i
-
 Here's the parent code that starts the threads and waits for them
 
 \begin{verbatim}
-    int i;
     pthread_t child[NUM_CHILDREN];
 
     Shared *shared = make_shared();
@@ -3874,7 +3867,7 @@ Here's the parent code that starts the threads and waits for them
     child[0] = make_thread(producer_entry, shared);
     child[1] = make_thread(consumer_entry, shared);
 
-    for (i=0; i<NUM_CHILDREN; i++) {
+    for (int i=0; i<NUM_CHILDREN; i++) {
         join_thread(child[i]);
     }
 \end{verbatim}
@@ -3911,7 +3904,7 @@ producer to block if the queue is full.
 
 \end{itemize}
 
-In the next section, we solve the first problem with a Mutex.
+In the next section, we solve the first problem with a {\tt Mutex}.
 In the following section, we solve the second problem with condition
 variables.
 
@@ -3921,30 +3914,29 @@ variables.
 We can make the queue thread safe with a mutex.  This version
 of the code is in \verb"queue_mutex.c".
 
-First we add a Mutex pointer to the queue structure:
+First we add a {\tt Mutex} pointer to the queue structure:
 
 \begin{verbatim}
 typedef struct {
-  int *array;
-  int length;
-  int next_in;
-  int next_out;
-  Mutex *mutex;          //-- this line is new
+    int *array;
+    int length;
+    int next_in;
+    int next_out;
+    Mutex *mutex;          //-- this line is new
 } Queue;
 \end{verbatim}
 
-And initialize the Mutex in \verb"make_queue":
+And initialize the {\tt Mutex} in \verb"make_queue":
 
 \begin{verbatim}
-Queue *make_queue(int length)
-{
-  Queue *queue = (Queue *) malloc(sizeof(Queue));
-  queue->length = length;
-  queue->array = (int *) malloc(length * sizeof(int));
-  queue->next_in = 0;
-  queue->next_out = 0;
-  queue->mutex = make_mutex();   //-- new
-  return queue;
+Queue *make_queue(int length) {
+    Queue *queue = (Queue *) malloc(sizeof(Queue));
+    queue->length = length;
+    queue->array = (int *) malloc(length * sizeof(int));
+    queue->next_in = 0;
+    queue->next_out = 0;
+    queue->mutex = make_mutex();   //-- new
+    return queue;
 }
 \end{verbatim}
 
@@ -3952,41 +3944,41 @@ Next we add synchronization code to \verb"queue_push":
 
 \begin{verbatim}
 void queue_push(Queue *queue, int item) {
-  mutex_lock(queue->mutex);   //-- new
-  if (queue_full(queue)) {
-    mutex_unlock(queue->mutex);   //-- new
-    perror_exit("queue is full");
-  }
+    mutex_lock(queue->mutex);   //-- new
+    if (queue_full(queue)) {
+      mutex_unlock(queue->mutex);   //-- new
+      perror_exit("queue is full");
+    }
   
-  queue->array[queue->next_in] = item;
-  queue->next_in = queue_incr(queue, queue->next_in);
-  mutex_unlock(queue->mutex);   //-- new
+    queue->array[queue->next_in] = item;
+    queue->next_in = queue_incr(queue, queue->next_in);
+    mutex_unlock(queue->mutex);   //-- new
 }
 \end{verbatim}
 
 Before checking whether the queue is full, we have to lock
-the mutex.  If the queue is full, we have to unlock
-the mutex before exiting; otherwise the thread would leave
-the mutex locked and no other threads could proceed.
+the {\tt Mutex}.  If the queue is full, we have to unlock
+the {\tt Mutex} before exiting; otherwise the thread would leave
+it locked and no other threads could proceed.
 
 The synchronization code for \verb"queue_pop" is similar:
 
 \begin{verbatim}
 int queue_pop(Queue *queue) {
-  mutex_lock(queue->mutex);
-  if (queue_empty(queue)) {
-    mutex_unlock(queue->mutex);
-    perror_exit("queue is empty");
-  }
+    mutex_lock(queue->mutex);
+    if (queue_empty(queue)) {
+      mutex_unlock(queue->mutex);
+      perror_exit("queue is empty");
+    }
   
-  int item = queue->array[queue->next_out];
-  queue->next_out = queue_incr(queue, queue->next_out);
-  mutex_unlock(queue->mutex);
-  return item;
+    int item = queue->array[queue->next_out];
+    queue->next_out = queue_incr(queue, queue->next_out);
+    mutex_unlock(queue->mutex);
+    return item;
 }
 \end{verbatim}
 
-Note that the other Queue functions, \verb"queue_full",
+Note that the other {\tt Queue} functions, \verb"queue_full",
 \verb"queue_empty", and \verb"queue_incr" do not try to lock
 the mutex.  Any thread that calls these functions is required to
 lock the mutex first; this requirement is part of the documented
@@ -4005,42 +3997,41 @@ The next step is to add condition variables.
 
 A condition variable is a data structure associated with a condition;
 it allows threads to block until the condition becomes true.  For
-example, \verb"thread_push" might want to check whether the queue is
-full and, if so, block until it is not full.  So the ``condition'' we
-are interested in is ``queue not full''.
+example, \verb"thread_pop" might want check whether the queue is
+empty and, if so, wait for a condition like ``queue not empty''.
 
-Similarly, \verb"thread_pop" might want to wait for a condition
-like ``queue not empty''.
+Similarly, \verb"thread_push" might want to check whether the queue is
+full and, if so, block until it is not full.
 
-Here's how we can add these capabilities to the queue code.  First
-we add two condition variables to the Queue structure:
+I'll handle the first condition here, and you will have a chance to
+handle the second condition as an exercise.
+
+First we add a condition variable to the {\tt Queue} structure:
 
 \begin{verbatim}
 typedef struct {
-  int *array;
-  int length;
-  int next_in;
-  int next_out;
-  Mutex *mutex;
-  Cond *nonempty;   //-- new
-  Cond *nonfull;    //-- new
+    int *array;
+    int length;
+    int next_in;
+    int next_out;
+    Mutex *mutex;
+    Cond *nonempty;   //-- new
 } Queue;
 \end{verbatim}
 
-And initialize them in \verb"make_queue":
+And initialize it in \verb"make_queue":
 
 \begin{verbatim}
 Queue *make_queue(int length)
 {
-  Queue *queue = (Queue *) malloc(sizeof(Queue));
-  queue->length = length;
-  queue->array = (int *) malloc(length * sizeof(int));
-  queue->next_in = 0;
-  queue->next_out = 0;
-  queue->mutex = make_mutex();
-  queue->nonempty = make_cond();   //-- new
-  queue->nonfull = make_cond();    //-- new
-  return queue;
+    Queue *queue = (Queue *) malloc(sizeof(Queue));
+    queue->length = length;
+    queue->array = (int *) malloc(length * sizeof(int));
+    queue->next_in = 0;
+    queue->next_out = 0;
+    queue->mutex = make_mutex();
+    queue->nonempty = make_cond();   //-- new
+    return queue;
 }
 \end{verbatim}
 
@@ -4065,9 +4056,7 @@ int queue_pop(Queue *queue) {
 \verb"cond_wait" is complicated, so let's take it slow.  
 The first argument is the condition variable; in this case,
 the condition we are waiting for is ``queue not empty''.  The second
-argument is the mutex that protects the queue.  Before you
-call \verb"cond_wait", you have to lock the mutex.  Otherwise the
-whole thing doesn't work.
+argument is the mutex that protects the queue.
 
 When the thread that locked the mutex calls \verb"cond_wait", it
 unlocks the mutex and then blocks.  This is important.  If
@@ -4080,32 +4069,33 @@ run.  Let's see what happens when the producer runs \verb"queue_push":
 
 \begin{verbatim}
 void queue_push(Queue *queue, int item) {
-  mutex_lock(queue->mutex);
-  while (queue_full(queue)) {
-    cond_wait(queue->nonfull, queue->mutex);    //-- new
-  }
-  
-  queue->array[queue->next_in] = item;
-  queue->next_in = queue_incr(queue, queue->next_in);
-  mutex_unlock(queue->mutex);
-  cond_signal(queue->nonempty);  //-- new
+    mutex_lock(queue->mutex);
+    if (queue_full(queue)) {
+        mutex_unlock(queue->mutex);
+        perror_exit("queue is full");
+    }
+    queue->array[queue->next_in] = item;
+    queue->next_in = queue_incr(queue, queue->next_in);
+    mutex_unlock(queue->mutex);
+    cond_signal(queue->nonempty);    //-- new
 }
 \end{verbatim}
 
-Let's assume that the queue is not full, so the producer doesn't
-run \verb"cond_wait" and doesn't block.  It adds a new element
-to the queue and then unlocks the mutex.  But before exiting,
-it does one more thing: it ``signals'' the condition variable
-{\tt nonempty}.
+Just as before, \verb"queue_push" locks the {\tt Mutex} and checks
+whether the queue is full.  Assuming it is not, \verb"queue_push" adds
+a new element to the queue and then unlocks the {\tt Mutex}.
 
-Signalling a condition variable indicates that the condition is
-true, or at least that it might be.  If there are no threads waiting
+But before returning, it does one more thing: it ``signals'' the
+condition variable {\tt nonempty}.
+
+Signalling a condition variable usually indicates that the condition is
+true.  If there are no threads waiting
 on the condition variable, the signal has no effect.
 
 If there are threads waiting on the condition variable, one of them
 gets unblocked and resumes execution of \verb"cond_wait".  But before
 the awakened thread can return from \verb"cond_wait", it has
-to wait for and lock the mutex, again.
+to wait for and lock the {\tt Mutex}, again.
 
 Now go back to \verb"queue_pop" and see what happens when the thread
 returns from \verb"cond_wait".  It loops back to the top of the while
@@ -4113,14 +4103,14 @@ loop and checks the condition again.  I'll explain why in just a
 second, but for now let's assume that the condition is true; that is,
 the queue is not empty.
 
-When the thread exits the while loop, we know two things: (1) the condition
-is true, so there is at least one item in the queue, and (2) the mutex
-is locked, so it is safe to access the queue.
+When the consumer thread exits the while loop, we know two things: (1)
+the condition is true, so there is at least one item in the queue, and
+(2) the {\tt Mutex} is locked, so it is safe to access the queue.
 
-After removing an item, \verb"queue_pop" unlocks the mutex, signals
-that the queue is not full, and returns.
+After removing an item, \verb"queue_pop" unlocks the mutex
+and returns.
 
-In the next section I'll show you how my Cond code works, but first I
+In the next section I'll show you how my {\tt Cond} code works, but first I
 want to answer two frequently-asked questions:
 
 \begin{itemize}
@@ -4145,17 +4135,20 @@ variables is ``How does the condition variable know what condition it
 is associated with?''
 
 This question is understandable because there is no explicit connection
-between a Cond structure and the condition it relates to.  The
+between a {\tt Cond} structure and the condition it relates to.  The
 connection is implicit in the way it is used.
 
 Here's one way to think of it: the condition associated with a Cond
 is the thing that is false when you call \verb"cond_wait" and true
-when you call \verb"cond_signal".  Of course, there might be many
-conditions that are true in the first case and false in the second.
-The right one is only in the mind of the programmer, so it should be
-explained carefully in the documentation.
+when you call \verb"cond_signal".
 
 \end{itemize}
+
+Because threads have to check the condition when they return from
+\verb"cond_wait", it is not strictly necessary to call \verb"cond_signal"
+only when the condition is true.  If you have reason to think the
+condition {\em might} be true, you could call \verb"cond_signal" as
+a suggestion that now is a good time to check.
 
 
 \section{Condition variable implementation}
@@ -4176,29 +4169,26 @@ typedef pthread_cond_t Cond;
 and returns a pointer:
 
 \begin{verbatim}
-Cond *make_cond()
-{
-  Cond *cond = check_malloc(sizeof(Cond)); 
-  int n = pthread_cond_init(cond, NULL);
-  if (n != 0) perror_exit("make_cond failed");
+Cond *make_cond() {
+    Cond *cond = check_malloc(sizeof(Cond)); 
+    int n = pthread_cond_init(cond, NULL);
+    if (n != 0) perror_exit("make_cond failed");
  
-  return cond;
+    return cond;
 }
 \end{verbatim}
 
 And here are the wrappers for \verb"cond_wait" and \verb"cond_signal".
 
 \begin{verbatim}
-void cond_wait(Cond *cond, Mutex *mutex)
-{
-  int n = pthread_cond_wait(cond, mutex);
-  if (n != 0) perror_exit("cond_wait failed");
+void cond_wait(Cond *cond, Mutex *mutex) {
+    int n = pthread_cond_wait(cond, mutex);
+    if (n != 0) perror_exit("cond_wait failed");
 }
 
-void cond_signal(Cond *cond)
-{
-  int n = pthread_cond_signal(cond);
-  if (n != 0) perror_exit("cond_signal failed");
+void cond_signal(Cond *cond) {
+    int n = pthread_cond_signal(cond);
+    if (n != 0) perror_exit("cond_signal failed");
 }
 \end{verbatim}
 
@@ -4234,14 +4224,9 @@ The POSIX standard specifies an interface for semaphores;
 it is not part of Pthreads, but most UNIXes
 that implement Pthreads also provide semaphores.
 
-POSIX semaphores have type {\tt sem\_t}.  
-This type behaves like a structure, so
-if you assign it to a variable you are making a copy of the
-contents.  Copying a semaphore is almost certainly
-a bad idea; in POSIX, the behavior of the copy is undefined.
-
-Fortunately, it is easy to put a wrapper around {\tt sem\_t}
-to make it safer and easier to use.  My wrapper API is in {\tt sem.h}:
+POSIX semaphores have type {\tt sem\_t}.
+As usual, I put a wrapper around {\tt sem\_t}
+to make it safer and easier to use.  My wrapper is in {\tt sem.h}:
 
 \begin{verbatim}
 typedef sem_t Semaphore;
@@ -4260,10 +4245,10 @@ The implementation of these functions is in {\tt sem.c}:
 \begin{verbatim}
 Semaphore *make_semaphore(int value)
 {
-  Semaphore *sem = check_malloc(sizeof(Semaphore));
-  int n = sem_init(sem, 0, value);
-  if (n != 0) perror_exit("sem_init failed");
-  return sem;
+    Semaphore *sem = check_malloc(sizeof(Semaphore));
+    int n = sem_init(sem, 0, value);
+    if (n != 0) perror_exit("sem_init failed");
+    return sem;
 }
 \end{verbatim}
 
@@ -4281,8 +4266,8 @@ Here is the implementation of \verb"semaphore_wait":
 \begin{verbatim}
 void semaphore_wait(Semaphore *sem)
 {
-  int n = sem_wait(sem);
-  if (n != 0) perror_exit("sem_wait failed");
+    int n = sem_wait(sem);
+    if (n != 0) perror_exit("sem_wait failed");
 }
 \end{verbatim}
 
@@ -4291,8 +4276,8 @@ And here is \verb"semaphore_signal":
 \begin{verbatim}
 void semaphore_signal(Semaphore *sem)
 {
-  int n = sem_post(sem);
-  if (n != 0) perror_exit("sem_post failed");
+    int n = sem_post(sem);
+    if (n != 0) perror_exit("sem_post failed");
 }
 \end{verbatim}
 
@@ -4303,8 +4288,9 @@ Here's an example that shows how to use a semaphore as a mutex:
 
 \begin{verbatim}
 Semaphore *mutex = make_semaphore(1);
+
 semaphore_wait(mutex);
-// protected code goes here
+  // protected code goes here
 semaphore_signal(mutex);
 \end{verbatim}
 
@@ -4325,18 +4311,20 @@ write a solution to the Producer-Consumer problem from
 Section~\ref{prodcon}.
 The code in this section is in \verb"queue_sem.c".
 
+%TODO: Get this code into ExercisesInC/examples/queue
+
 Here's the new definition of {\tt Queue}, replacing the mutex
 and condition variables with semaphores:
 
 \begin{verbatim}
 typedef struct {
-  int *array;
-  int length;
-  int next_in;
-  int next_out;
-  Semaphore *mutex;       //-- new
-  Semaphore *items;       //-- new
-  Semaphore *spaces;      //-- new
+    int *array;
+    int length;
+    int next_in;
+    int next_out;
+    Semaphore *mutex;       //-- new
+    Semaphore *items;       //-- new
+    Semaphore *spaces;      //-- new
 } Queue;
 \end{verbatim}
 
@@ -4345,15 +4333,15 @@ And here's the new version of \verb"make_queue":
 \begin{verbatim}
 Queue *make_queue(int length)
 {
-  Queue *queue = (Queue *) malloc(sizeof(Queue));
-  queue->length = length;
-  queue->array = (int *) malloc(length * sizeof(int));
-  queue->next_in = 0;
-  queue->next_out = 0;
-  queue->mutex = make_semaphore(1);
-  queue->items = make_semaphore(0);
-  queue->spaces = make_semaphore(length-1);
-  return queue;
+    Queue *queue = (Queue *) malloc(sizeof(Queue));
+    queue->length = length;
+    queue->array = (int *) malloc(length * sizeof(int));
+    queue->next_in = 0;
+    queue->next_out = 0;
+    queue->mutex = make_semaphore(1);
+    queue->items = make_semaphore(0);
+    queue->spaces = make_semaphore(length-1);
+    return queue;
 }
 \end{verbatim}
 
@@ -4445,6 +4433,8 @@ typedef struct {
   Cond *cond;
 } Semaphore;
 \end{verbatim}
+
+% TODO: Include Property 3 (it's in LBoS).
 
 {\tt value} is the value of the semaphore.  {\tt wakeups} counts
 the number of pending signals; that is, the number of threads

@@ -3364,7 +3364,7 @@ If an error occurs, {\tt pthread\_create}
 returns an error code and \verb"make_thread" prints an error message
 and exits.
 
-The parameters of {\tt pthread\_create} take some
+The parameters of \verb"make_thread" take some
 explaining.  Starting with the second, {\tt Shared}
 is a structure I defined to contain values shared between threads.
 The following {\tt typedef} statement creates the new type:
@@ -3389,8 +3389,8 @@ Shared *make_shared()
 \end{verbatim}
 
 Now that we have a shared data structure, let's get back to
-{\tt pthread\_create}.
-The third parameter is a pointer to a function that takes
+\verb"make_thread".
+The first parameter is a pointer to a function that takes
 a {\tt void} pointer and returns a {\tt void} pointer.  If the syntax
 for declaring this type makes your eyes bleed, you are not alone.
 Anyway, the purpose of this parameter is to specify the function where

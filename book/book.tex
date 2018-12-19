@@ -4005,11 +4005,11 @@ The next step is to add condition variables.
 
 A condition variable is a data structure associated with a condition;
 it allows threads to block until the condition becomes true.  For
-example, \verb"thread_push" might want to check whether the queue is
+example, \verb"queue_push" might want to check whether the queue is
 full and, if so, block until it is not full.  So the ``condition'' we
 are interested in is ``queue not full''.
 
-Similarly, \verb"thread_pop" might want to wait for a condition
+Similarly, \verb"queue_pop" might want to wait for a condition
 like ``queue not empty''.
 
 Here's how we can add these capabilities to the queue code.  First

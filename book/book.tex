@@ -29,7 +29,6 @@
 %\usepackage{amssymb}
 \usepackage{makeidx}
 \usepackage{setspace}
-\usepackage{hevea}                           
 \usepackage{upquote}
 \usepackage{listings}
 \usepackage{color}
@@ -38,18 +37,8 @@
 \author{Allen B. Downey}
 
 \newcommand{\thetitle}{Think OS: A Brief Introduction to Operating Systems}
-\newcommand{\theversion}{0.7.2}
+\newcommand{\theversion}{0.7.3}
 
-% these styles get translated in CSS for the HTML version
-\newstyle{a:link}{color:black;}
-\newstyle{p+p}{margin-top:1em;margin-bottom:1em}
-\newstyle{img}{border:0px}
-
-% change the arrows in the HTML version
-\setlinkstext
-  {\imgsrc[ALT="Previous"]{back.png}}
-  {\imgsrc[ALT="Up"]{up.png}}
-  {\imgsrc[ALT="Next"]{next.png}} 
 
 % Commands that control the appearance of the listings
 \definecolor{light-gray}{gray}{0.95}
@@ -61,18 +50,10 @@ numbers=left, numberstyle=\tiny, numbersep=10pt}
 
 \makeindex
 
-\newif\ifplastex
-\plastexfalse
-
 \begin{document}
 
 \frontmatter
 
-\ifplastex
-    \usepackage{localdef}
-    \maketitle
-
-\else
 
 %%% EXERCISE
 
@@ -89,44 +70,102 @@ numbers=left, numberstyle=\tiny, numbersep=10pt}
 \theoremstyle{exercise}
 \newtheorem{exercise}{Exercise}[chapter]
 
-\input{latexonly}
+\sloppy
+%\setlength{\topmargin}{-0.375in}
+%\setlength{\oddsidemargin}{0.0in}
+%\setlength{\evensidemargin}{0.0in}
 
-\begin{latexonly}
+% Uncomment these to center on 8.5 x 11
+%\setlength{\topmargin}{0.625in}
+%\setlength{\oddsidemargin}{0.875in}
+%\setlength{\evensidemargin}{0.875in}
 
-\renewcommand{\blankpage}{\thispagestyle{empty} \quad \newpage}
+%\setlength{\textheight}{7.2in}
 
-%\blankpage
-%\blankpage
+\setlength{\headsep}{3ex}
+\setlength{\parindent}{0.0in}
+\setlength{\parskip}{1.7ex plus 0.5ex minus 0.5ex}
+\renewcommand{\baselinestretch}{1.02}
 
-% TITLE PAGES FOR LATEX VERSION
+% see LaTeX Companion page 62
+\setlength{\topsep}{-0.0\parskip}
+\setlength{\partopsep}{-0.5\parskip}
+\setlength{\itemindent}{0.0in}
+\setlength{\listparindent}{0.0in}
 
-%-half title--------------------------------------------------
-\thispagestyle{empty}
+% see LaTeX Companion page 26
+% these are copied from /usr/local/teTeX/share/texmf/tex/latex/base/book.cls
+% all I changed is afterskip
 
-\begin{flushright}
-\vspace*{2.0in}
+\makeatletter
 
-\begin{spacing}{3}
-{\huge Think OS: A Brief Introduction to Operating Systems}\\
-{\Large }
-\end{spacing}
+\renewcommand{\section}{\@startsection 
+    {section} {1} {0mm}%
+    {-3.5ex \@plus -1ex \@minus -.2ex}%
+    {0.7ex \@plus.2ex}%
+    {\normalfont\Large\bfseries}}
+\renewcommand\subsection{\@startsection {subsection}{2}{0mm}%
+    {-3.25ex\@plus -1ex \@minus -.2ex}%
+    {0.3ex \@plus .2ex}%
+    {\normalfont\large\bfseries}}
+\renewcommand\subsubsection{\@startsection {subsubsection}{3}{0mm}%
+    {-3.25ex\@plus -1ex \@minus -.2ex}%
+    {0.3ex \@plus .2ex}%
+    {\normalfont\normalsize\bfseries}}
 
-\vspace{0.25in}
+% The following line adds a little extra space to the column
+% in which the Section numbers appear in the table of contents
+\renewcommand{\l@section}{\@dottedtocline{1}{1.5em}{3.0em}}
+\setcounter{tocdepth}{1}
 
-Version \theversion
+\newcommand{\adjustpage}[1]{\enlargethispage{#1\baselineskip}}
 
-\vfill
 
-\end{flushright}
+% Note: the following command seems to cause problems for Acroreader
+% on Windows, so for now I am overriding it.
+%\newcommand{\clearemptydoublepage}{
+%            \newpage{\pagestyle{empty}\cleardoublepage}}
+\newcommand{\clearemptydoublepage}{\cleardoublepage}
 
-%--verso------------------------------------------------------
+%\newcommand{\blankpage}{\pagestyle{empty}\vspace*{1in}\newpage}
+\newcommand{\blankpage}{\vspace*{1in}\newpage}
 
-\blankpage
-\blankpage
-%\clearemptydoublepage
-%\pagebreak
-%\thispagestyle{empty}
-%\vspace*{6in}
+% HEADERS
+
+\renewcommand{\chaptermark}[1]{\markboth{#1}{}}
+\renewcommand{\sectionmark}[1]{\markright{\thesection\ #1}{}}
+
+\lhead[\fancyplain{}{\bfseries\thepage}]%
+      {\fancyplain{}{\bfseries\rightmark}}
+\rhead[\fancyplain{}{\bfseries\leftmark}]%
+      {\fancyplain{}{\bfseries\thepage}}
+\cfoot{}
+
+\pagestyle{fancyplain}
+
+
+% turn off the rule under the header
+%\setlength{\headrulewidth}{0pt}
+
+% the following is a brute-force way to prevent the headers
+% from getting transformed into all-caps
+\renewcommand\MakeUppercase{}
+
+% Exercise environment
+\newtheoremstyle{myex}% name
+     {9pt}%      Space above
+     {9pt}%      Space below
+     {}%         Body font
+     {}%         Indent amount (empty = no indent, \parindent = para indent)
+     {\bfseries}% Thm head font
+     {}%        Punctuation after thm head
+     {0.5em}%     Space after thm head: " " = normal interword space;
+           %       \newline = linebreak
+     {}%         Thm head spec (can be left empty, meaning `normal')
+
+\theoremstyle{myex}
+
+
 
 %--title page--------------------------------------------------
 \pagebreak
@@ -200,38 +239,6 @@ is at \url{http://flickr.com/photos/frielp/11999738/}.
 
 } % end small
 
-\end{latexonly}
-
-
-% HTMLONLY
-
-\begin{htmlonly}
-
-% TITLE PAGE FOR HTML VERSION
-
-{\Large \thetitle}
-
-{\large Allen B. Downey}
-
-Version \theversion
-
-\vspace{0.25in}
-
-Copyright 2011 Allen B. Downey
-
-\vspace{0.25in}
-
-Permission is granted to copy, distribute, and/or modify this document
-under the terms of the Creative Commons Attribution-NonCommercial 3.0
-Unported License, which is available at
-\url{http://creativecommons.org/licenses/by-nc/3.0/}.
-
-\setcounter{chapter}{-1}
-
-\end{htmlonly}
-
-\fi
-% END OF THE PART WE SKIP FOR PLASTEX
 
 \chapter{Preface}
 \label{preface}
@@ -389,7 +396,6 @@ Jim Tyson, Donald Robertson, Jeremy Vermast, Yuzhong Huang, Ian Hill.
 \clearemptydoublepage
 
 % TABLE OF CONTENTS
-\begin{latexonly}
 
 \tableofcontents
 
@@ -397,8 +403,6 @@ Jim Tyson, Donald Robertson, Jeremy Vermast, Yuzhong Huang, Ian Hill.
 
 % inline syntax formatting
 \newcommand{\vb}{\verb}%}
-
-\end{latexonly}
 
 % START THE BOOK
 \mainmatter
@@ -409,11 +413,11 @@ Jim Tyson, Donald Robertson, Jeremy Vermast, Yuzhong Huang, Ian Hill.
 
 \section{Compiled and interpreted languages}
 
-People often describe programming languages as either compiled,
-which means that programs are translated into machine language and
-then executed by hardware, or interpreted, which means that programs
+People often describe programming languages as either compiled or interpreted.
+``Compiled'' means that programs are translated into machine language and
+then executed by hardware; ``interpreted'' means that programs
 are read and executed by a software interpreter.
-For example, C is considered a compiled language and Python is
+Usually C is considered a compiled language and Python is
 considered an interpreted language.  But the distinction is not always
 clear-cut.
 
@@ -438,9 +442,9 @@ languages are usually limited to static types.  In a statically-typed
 language, you can tell by looking at the program what type each
 variable refers to.  In a dynamically-typed language,
 you don't always know the type of a variable until the
-program is running.  In general, ``static'' refers to things that
-happen at compile time, and ``dynamic'' refers to things that happen
-at run time.
+program is running.  In general, {\bf static} refers to things that
+happen at compile time (while a program is being compiled), and {\bf dynamic} refers to things that happen
+at run time (while a program is running).
 
 For example, in Python you can write a function like this:
 
@@ -450,10 +454,10 @@ def add(x, y):
 \end{verbatim}
 
 Looking at this code, you can't tell what type {\tt x} and {\tt y}
-will refer to.  At run time, this function might be called several
+will refer to at run time.  This function might be called several
 times, each time with values with different types.  Any values that
 support the addition operator will work; any other types will cause an
-exception or ``run time error.''
+exception or {\bf runtime error}.
 
 In C you would write the same function like this:
 
@@ -463,7 +467,7 @@ int add(int x, int y) {
 }
 \end{verbatim}
 
-The first line of the function includes ``type declarations'' for the
+The first line of the function includes {\bf type declarations} for the
 parameters and the return value: {\tt x} and {\tt y} are declared to
 be integers, which means that we can check at compile time
 whether the addition operator is legal for this type (it is).  The
@@ -474,7 +478,7 @@ in the program, the compiler can check whether the arguments provided
 have the right type, and whether the return value is used correctly.
 
 These checks happen before the program starts executing, so errors can
-be found more quickly.  More importantly, errors can be found in parts
+be found earlier.  More importantly, errors can be found in parts
 of the program that have never run.  Furthermore, these checks don't
 have to happen at run time, which is one of the reasons compiled
 languages generally run faster than interpreted languages.
@@ -501,7 +505,7 @@ In compiled languages, variable names exist at compile-time but not at
 run time.  The compiler chooses a location for each variable and
 records these locations as part of the compiled program.\footnote{This
   is a simplification; we will go into more detail later.}  The
-location of a variable is called its ``address''.  At run time, the
+location of a variable is called its {\bf address}.  At run time, the
 value of each variable is stored at its address, but the names of the
 variables are not stored at all (unless they are added by the compiler
 for purposes of debugging).
@@ -535,20 +539,20 @@ The steps of compilation are:
 \begin{enumerate}
 
 \item Preprocessing: C is one of several languages that include
-  ``preprocessing directives'' that take effect before the program is
+  {\bf preprocessing directives} that take effect before the program is
   compiled.  For example, the \verb"#include" directive causes the
   source code from another file to be inserted at the location of the
   directive.
 
 \item Parsing: During parsing, the compiler reads the source code and
   builds an internal representation of the program, called an
-  ``abstract syntax tree.''  Errors
+  {\bf abstract syntax tree}.  Errors
   detected during this step are generally syntax errors.
 
 \item Static checking: The compiler checks whether variables and
   values have the right type, whether functions are called with the
   right number and type of arguments, etc.  Errors detected during
-  this step are sometimes called ``static semantic'' errors.
+  this step are sometimes called {\bf static semantic} errors.
 
 \item Code generation: The compiler reads the internal representation
   of the program and generates machine code or byte code.
@@ -609,7 +613,7 @@ $ gcc hello.c -c
 \end{verbatim}
 
 The result is a file named {\tt hello.o}, where the {\tt o} stands for
-``object code'', which is the compiled program.  Object code is not
+{\bf object code}, which is the compiled program.  Object code is not
 executable, but it can be linked into an executable.
 
 The UNIX command {\tt nm} reads an object file and generates
@@ -622,7 +626,7 @@ $ nm hello.o
 \end{verbatim}
 
 This output indicates that {\tt hello.o} defines the name {\tt main}
-and uses a function named {\tt puts}, which stands for ``put string.''
+and uses a function named {\tt puts}, which stands for ``put string''.
 In this example, {\tt gcc} performs an optimization by replacing
 {\tt printf}, which is a large and complicated function, with
 {\tt puts}, which is relatively simple.
@@ -844,8 +848,7 @@ following data:
   machine language instructions.
 
 \item Data associated with the program, including static data (allocated
-  at compile time) and dynamic data including the call stack and
-  the heap.
+  at compile time) and dynamic data (allocated at run time).
 
 \item The state of any pending input/output operations.  For example,
   if the process is waiting for data to be read from disk or for a
@@ -862,7 +865,7 @@ Usually one process runs one program, but it is also possible for
 a process to load and run a new program.
 
 It is also possible, and common, to run the same program in more than one
-process.  In that case, the processes share the same program text,
+process.  In that case, the processes share the same program text
 but generally have different data and hardware states.
 
 Most operating systems provide a fundamental set of capabilities
@@ -923,7 +926,7 @@ browser.  Some browsers, like Chrome, create a new process for each
 window and each tab.
 
 And those are just the processes I am aware of.  At the same time
-there are many other processes running ``in the background.''
+there are many other processes running in the {\bf background}.
 Many of them are performing operations related to the operating
 system.
 
@@ -984,11 +987,11 @@ starts.  It creates many of the other processes, and then sits idle
 until the processes it created are done.
 
 {\tt kthreadd} is a process the operating system uses to create new
-``threads''.  We'll talk more about threads later, but for now you can
+{\bf threads}.  We'll talk more about threads later, but for now you can
 think of a thread as kind of a process.  The {\tt k} at the beginning
-stands for ``kernel'' which is the part of the operating system
+stands for {\bf kernel}, which is the part of the operating system
 responsible for core capabilities like creating threads.  The extra
-{\tt d} at the end stands for ``daemon'', which is another name for
+{\tt d} at the end stands for {\bf daemon}, which is another name for
 processes like this that run in the background and provide operating
 system services.  In this context, ``daemon'' is used in the
 sense of a helpful spirit, with no connotation of evil.
@@ -1016,11 +1019,11 @@ to mine.
 
 \section{A bit of information theory}
 
-A bit is a binary digit; it is also a unit of information.  If you
+A {\bf bit} is a binary digit; it is also a unit of information.  If you
 have one bit, you can specify one of two possibilities, usually
 written 0 and 1.  If you have two bits, there are 4 possible
 combinations, 00, 01, 10, and 11.  In general, if you have $b$ bits, you
-can indicate one of $2^b$ values.  A byte is 8 bits, so it can
+can indicate one of $2^b$ values.  A {\bf byte} is 8 bits, so it can
 hold one of 256 values.
 
 Going in the other direction, suppose you want to store a letter
@@ -1041,9 +1044,9 @@ then the outcome contains $log_2 N$ bits of information.
 
 Equivalently, if the probability of the outcome is $p$, then
 the information content is $-log_2 p$.  This quantity is called
-the ``self-information'' of the outcome.  It measures
+the {\bf self-information} of the outcome.  It measures
 how surprising the outcome is, which is why it is also called
-``surprisal.''  If your horse has only one chance in 16 of winning,
+{\bf surprisal}.  If your horse has only one chance in 16 of winning,
 and he wins, you get 4 bits of information (along with the
 payout).  But if the favorite wins 75\% of the time, the news
 of the win contains only 0.42 bits.
@@ -1059,16 +1062,16 @@ number of values they can encode, $N = 2^b$.
 
 \section{Memory and storage}
 
-While a process is running, most of its data is held in ``main
-memory'', which is usually some kind of random access memory (RAM).
-On most current computers, main memory is volatile, which means that
+While a process is running, most of its data is held in {\bf main
+memory}, which is usually some kind of random access memory (RAM).
+On most current computers, main memory is {\bf volatile}, which means that
 when the computer shuts down, the contents of main memory are lost.
 A typical desktop computer has 2--8 GiB of
 memory.  GiB stands for ``gibibyte,'' which is $2^{30}$ bytes.  
 
 If the process reads and writes files, those files are usually stored
 on a hard disk drive (HDD) or solid state drive (SSD).  These storage
-devices are non-volatile, so they are used for long-term storage.
+devices are {\bf non-volatile}, so they are used for long-term storage.
 Currently a typical desktop computer has a HDD with a capacity of 500
 GB to 2 TB.  GB stands for ``gigabyte,'' which is $10^9$ bytes.  TB
 stands for ``terabyte,'' which is $10^{12}$ bytes.
@@ -1084,25 +1087,25 @@ abbreviation GB are often used ambiguously.
 In casual use, the term ``memory'' is sometimes used for HDDs and SSDs
 as well as RAM, but the properties of these devices are very
 different, so we will need to distinguish them.  I will use
-``storage'' to refer to HDDs and SSDs.
+{\bf storage} to refer to HDDs and SSDs.
 
 
 \section{Address spaces}
 
-Each byte in main memory is specified by an integer ``physical
-address''.  The set of valid physical addresses is called the
-physical ``address space.''  It
+Each byte in main memory is specified by an integer {\bf physical
+address}.  The set of valid physical addresses is called the
+physical {\bf address space}.  It
 usually runs from 0 to $N-1$, where $N$ is
 the size of main memory.  On a system with 1 GiB of physical memory,
 the highest valid address is $2^{30}-1$, which is 1,073,741,823 in
 decimal, or 0x03ff ffff in hexadecimal (the prefix 0x indicates a
 hexadecimal number).
 
-However, most operating systems provide ``virtual memory,'' which
+However, most operating systems provide {\bf virtual memory}, which
 means that programs never deal with physical addresses, and don't 
 have to know how much physical memory is available.
 
-Instead, programs work with virtual addresses, which are numbered
+Instead, programs work with {\bf virtual addresses}, which are numbered
 from 0 to $M-1$, where $M$ is the number of valid virtual addresses.
 The size of the virtual address space is determined by the operating
 system and the hardware it runs on.
@@ -1141,21 +1144,21 @@ The data of a running process is organized into five segments:
 
 \begin{itemize}
 
-\item The code segment contains the program text; that is, the
+\item The {\bf code segment} contains the program text; that is, the
   machine language instructions that make up the program.
 
-\item The static segment contains immutable values, like string
+\item The {\bf static segment} contains immutable values, like string
 literals.  For example, if your program contains the string
 {\tt "Hello, World"}, those characters will be stored in the
 static segment.
 
-\item The globals segment contains global variables and local variables that are declared {\tt static}.
+\item The {\bf global segment} contains global variables and local variables that are declared {\tt static}.
 
-\item The heap segment contains chunks of memory allocated
-  at run time, usually by calling the C library function
+\item The {\bf heap segment} contains chunks of memory allocated
+  at run time, most often by calling the C library function
   {\tt malloc}.
 
-\item The stack segment contains the call stack, which is a
+\item The {\bf stack segment} contains the call stack, which is a
   sequence of stack frames.  Each time a function is called, a stack
   frame is allocated to contain the 
   parameters and local variables of the function.  When the function
@@ -1263,11 +1266,11 @@ whether the stack grows down.
 
 \section{Static local variables}
 
-Local variables on the stack are sometimes called ``automatic'',
+Local variables on the stack are sometimes called {\bf automatic},
 because they are allocated automatically when a function is called,
 and freed automatically when the function returns.
 
-In C there is another kind of local variable, called ``static'',
+In C there is another kind of local variable, called {\bf static},
 which is allocated in the global segment.  It is initialized when
 the program starts and keeps its value from one function call to
 the next.
@@ -1296,14 +1299,18 @@ variables, not in the stack.
 \section{Address translation}
 \label{address_translation}
 
-How does a virtual address (VA) get translated to a physical address
-(PA)?  The basic mechanism is simple, but a simple
+How does a virtual address (VA) get translated to a physical address (PA)?
+The basic mechanism is simple, but a simple
 implementation would be too slow and take too much space.  So actual
 implementations are a bit more complicated.
 
-Most processors provide a memory management unit (MMU) that
-sits between the CPU and main memory.  The MMU performs fast
-translation between VAs and PAs.
+\begin{figure}
+\centerline{\includegraphics[width=3in]{figs/address_translation.pdf}}
+\caption{Diagram of the address translation process.}
+\label{addtrans}
+\end{figure}
+
+Most processors provide a memory management unit (MMU) that sits between the CPU and main memory.  The MMU performs fast translation between VAs and PAs.
 
 \begin{enumerate}
 
@@ -1325,7 +1332,8 @@ location.
 
 The TLB contains cached copies of data from the page table (which is stored in kernel memory).  The page table contains the mapping from virtual page numbers to physical page numbers.  Since each process has its own page table, the TLB has to make sure it only uses entries from the page table of the process that's running.
 
-To see how all this works, suppose that the VA is 32 bits and the physical memory is 1 GiB, divided into 1 KiB pages.
+Figure~\ref{addtrans} shows a diagram of this process.
+To see how it all works, suppose that the VA is 32 bits and the physical memory is 1 GiB, divided into 1 KiB pages.
 
 \begin{itemize}
 
@@ -1383,7 +1391,7 @@ sparse, so we have to choose a good implementation for sparse arrays.
 
 I mentioned earlier that the operating system can interrupt a running
 process, save its state, and then run another process.  This mechanism
-is called a ``context switch''.  Since each process has its own
+is called a {\bf context switch}.  Since each process has its own
 page table, the operating system has to work with the MMU to make
 sure each process gets the right page table.  In older machines,
 the page table information in the MMU had to be replaced during every

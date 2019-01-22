@@ -1115,7 +1115,7 @@ are 32 bits, which means that the virtual address space runs from 0 to
 GiB.
 
 On a 64-bit system, the size of the virtual address space is $2^{64}$
-bytes, or $4 \cdot 1024^6$ bytes.  That's 16 exbibytes, which is
+bytes, or $2^4 \cdot 1024^6$ bytes.  That's 16 exbibytes, which is
 about a billion times bigger than current physical memories.  It might
 seem strange that a virtual address space can be so much bigger
 than physical memory, but we will see soon how that works.
@@ -1289,7 +1289,7 @@ local variable.  The initialization happens only once, when the program
 starts.
 
 If you add this function to {\tt aspace.c} you can confirm that
-{\tt counter} is allocated in the static segment along with global
+{\tt counter} is allocated in the global segment along with global
 variables, not in the stack.
 
 
@@ -2214,7 +2214,7 @@ might happen:
 
 \begin{itemize}
 
-\item At some point, the system runs of out physical memory.  On
+\item At some point, the system runs out of physical memory.  On
   systems without virtual memory, the next call to {\tt malloc} will
   fail, returning NULL.
 
@@ -3364,7 +3364,7 @@ If an error occurs, {\tt pthread\_create}
 returns an error code and \verb"make_thread" prints an error message
 and exits.
 
-The parameters of {\tt pthread\_create} take some
+The parameters of \verb"make_thread" take some
 explaining.  Starting with the second, {\tt Shared}
 is a structure I defined to contain values shared between threads.
 The following {\tt typedef} statement creates the new type:
@@ -3389,8 +3389,8 @@ Shared *make_shared()
 \end{verbatim}
 
 Now that we have a shared data structure, let's get back to
-{\tt pthread\_create}.
-The third parameter is a pointer to a function that takes
+\verb"make_thread".
+The first parameter is a pointer to a function that takes
 a {\tt void} pointer and returns a {\tt void} pointer.  If the syntax
 for declaring this type makes your eyes bleed, you are not alone.
 Anyway, the purpose of this parameter is to specify the function where

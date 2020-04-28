@@ -1,12 +1,11 @@
-% LaTeX source for ``Think OS:
-% A Brief Introduction to Operating Systems''
+% LaTeX source for ``Think OS: A Brief Introduction to Operating Systems''
 % Copyright 2015  Allen B. Downey.
 
-% License: Creative Commons Attribution-NonCommercial 3.0 Unported License.
-% http://creativecommons.org/licenses/by-nc/3.0/
+% License: Creative Commons 
+% Attribution-NonCommercial-ShareAlike 4.0 International
+% http://creativecommons.org/licenses/by-nc-sa/4.0/
 %
 
-%\documentclass[10pt,b5paper]{book}
 \documentclass[12pt]{book}
 \usepackage[width=5.5in,height=8.5in,
   hmarginratio=3:2,vmarginratio=1:1]{geometry}
@@ -14,12 +13,13 @@
 % for some of these packages, you might have to install
 % texlive-latex-extra (in Ubuntu)
 
-\usepackage[T1]{fontenc}
-\usepackage{textcomp}
-\usepackage{mathpazo}
+%\usepackage[T1]{fontenc}
+%\usepackage{textcomp}
+%\usepackage{mathpazo}
 %\usepackage{pslatex}
 
 \usepackage{url}
+\usepackage{hyperref}
 \usepackage{fancyhdr}
 \usepackage{fancyvrb}
 \usepackage{graphicx}
@@ -29,16 +29,33 @@
 %\usepackage{amssymb}
 \usepackage{makeidx}
 \usepackage{setspace}
+\usepackage{hevea}
 \usepackage{upquote}
 \usepackage{listings}
 \usepackage{color}
 
+% include this so we can compile without hyperref
+% https://tex.stackexchange.com/questions/44088/when-do-i-need-to-invoke-phantomsection
+\providecommand\phantomsection{}
+
+
 \title{Think OS}
 \author{Allen B. Downey}
 
-\newcommand{\thetitle}{Think OS: A Brief Introduction to Operating Systems}
-\newcommand{\theversion}{0.7.3}
+\newcommand{\thetitle}{Think OS}
+\newcommand{\thesubtitle}{A Brief Introduction to Operating Systems}
+\newcommand{\theversion}{0.7.4}
 
+% these styles get translated in CSS for the HTML version
+\newstyle{a:link}{color:black;}
+\newstyle{p+p}{margin-top:1em;margin-bottom:1em}
+\newstyle{img}{border:0px}
+
+% change the arrows in the HTML version
+\setlinkstext
+  {\imgsrc[alt="Previous"]{back.png}}
+  {\imgsrc[alt="Up"]{up.png}}
+  {\imgsrc[alt="Next"]{next.png}}
 
 % Commands that control the appearance of the listings
 \definecolor{light-gray}{gray}{0.95}
@@ -46,6 +63,7 @@
 \lstset{basicstyle=\tt, frame=single, 
 backgroundcolor=\color{light-gray}, escapeinside={(*}{*)},
 numbers=left, numberstyle=\tiny, numbersep=10pt}
+
 
 
 \makeindex
@@ -61,7 +79,7 @@ numbers=left, numberstyle=\tiny, numbersep=10pt}
   {\topsep}% measure of space to leave above the theorem. E.g.: 3pt
   {\topsep}% measure of space to leave below the theorem. E.g.: 3pt
   {}% name of font to use in the body of the theorem
-  {0pt}% measure of space to indent
+  {}% measure of space to indent
   {\bfseries}% name of head font
   {}% punctuation between head and body
   { }% space after theorem head; " " = normal interword space
@@ -70,102 +88,38 @@ numbers=left, numberstyle=\tiny, numbersep=10pt}
 \theoremstyle{exercise}
 \newtheorem{exercise}{Exercise}[chapter]
 
-\sloppy
-%\setlength{\topmargin}{-0.375in}
-%\setlength{\oddsidemargin}{0.0in}
-%\setlength{\evensidemargin}{0.0in}
+\input{latexonly}
 
-% Uncomment these to center on 8.5 x 11
-%\setlength{\topmargin}{0.625in}
-%\setlength{\oddsidemargin}{0.875in}
-%\setlength{\evensidemargin}{0.875in}
+\begin{latexonly}
 
-%\setlength{\textheight}{7.2in}
+\renewcommand{\topfraction}{0.9}
+\renewcommand{\blankpage}{\thispagestyle{empty} \quad \newpage}
 
-\setlength{\headsep}{3ex}
-\setlength{\parindent}{0.0in}
-\setlength{\parskip}{1.7ex plus 0.5ex minus 0.5ex}
-\renewcommand{\baselinestretch}{1.02}
+% TITLE PAGES FOR LATEX VERSION
 
-% see LaTeX Companion page 62
-\setlength{\topsep}{-0.0\parskip}
-\setlength{\partopsep}{-0.5\parskip}
-\setlength{\itemindent}{0.0in}
-\setlength{\listparindent}{0.0in}
+%-half title--------------------------------------------------
+\thispagestyle{empty}
 
-% see LaTeX Companion page 26
-% these are copied from /usr/local/teTeX/share/texmf/tex/latex/base/book.cls
-% all I changed is afterskip
+\begin{flushright}
+\vspace*{2.0in}
 
-\makeatletter
+\begin{spacing}{3}
+{\huge \thetitle}\\
+{\Large \thesubtitle}
+\end{spacing}
 
-\renewcommand{\section}{\@startsection 
-    {section} {1} {0mm}%
-    {-3.5ex \@plus -1ex \@minus -.2ex}%
-    {0.7ex \@plus.2ex}%
-    {\normalfont\Large\bfseries}}
-\renewcommand\subsection{\@startsection {subsection}{2}{0mm}%
-    {-3.25ex\@plus -1ex \@minus -.2ex}%
-    {0.3ex \@plus .2ex}%
-    {\normalfont\large\bfseries}}
-\renewcommand\subsubsection{\@startsection {subsubsection}{3}{0mm}%
-    {-3.25ex\@plus -1ex \@minus -.2ex}%
-    {0.3ex \@plus .2ex}%
-    {\normalfont\normalsize\bfseries}}
+\vspace{0.25in}
 
-% The following line adds a little extra space to the column
-% in which the Section numbers appear in the table of contents
-\renewcommand{\l@section}{\@dottedtocline{1}{1.5em}{3.0em}}
-\setcounter{tocdepth}{1}
+Version \theversion
 
-\newcommand{\adjustpage}[1]{\enlargethispage{#1\baselineskip}}
+\vfill
 
+\end{flushright}
 
-% Note: the following command seems to cause problems for Acroreader
-% on Windows, so for now I am overriding it.
-%\newcommand{\clearemptydoublepage}{
-%            \newpage{\pagestyle{empty}\cleardoublepage}}
-\newcommand{\clearemptydoublepage}{\cleardoublepage}
+%--verso------------------------------------------------------
 
-%\newcommand{\blankpage}{\pagestyle{empty}\vspace*{1in}\newpage}
-\newcommand{\blankpage}{\vspace*{1in}\newpage}
-
-% HEADERS
-
-\renewcommand{\chaptermark}[1]{\markboth{#1}{}}
-\renewcommand{\sectionmark}[1]{\markright{\thesection\ #1}{}}
-
-\lhead[\fancyplain{}{\bfseries\thepage}]%
-      {\fancyplain{}{\bfseries\rightmark}}
-\rhead[\fancyplain{}{\bfseries\leftmark}]%
-      {\fancyplain{}{\bfseries\thepage}}
-\cfoot{}
-
-\pagestyle{fancyplain}
-
-
-% turn off the rule under the header
-%\setlength{\headrulewidth}{0pt}
-
-% the following is a brute-force way to prevent the headers
-% from getting transformed into all-caps
-\renewcommand\MakeUppercase{}
-
-% Exercise environment
-\newtheoremstyle{myex}% name
-     {9pt}%      Space above
-     {9pt}%      Space below
-     {}%         Body font
-     {}%         Indent amount (empty = no indent, \parindent = para indent)
-     {\bfseries}% Thm head font
-     {}%        Punctuation after thm head
-     {0.5em}%     Space after thm head: " " = normal interword space;
-           %       \newline = linebreak
-     {}%         Thm head spec (can be left empty, meaning `normal')
-
-\theoremstyle{myex}
-
-
+\blankpage
+\blankpage
 
 %--title page--------------------------------------------------
 \pagebreak
@@ -175,8 +129,8 @@ numbers=left, numberstyle=\tiny, numbersep=10pt}
 \vspace*{2.0in}
 
 \begin{spacing}{3}
-{\huge Think OS}\\
-{\Large  A Brief Introduction to Operating Systems}
+{\huge \thetitle}\\
+{\Large \thesubtitle}
 \end{spacing}
 
 \vspace{0.25in}
@@ -197,7 +151,6 @@ Allen B. Downey\\
 
 {\small Needham, Massachusetts}
 
-%\includegraphics[width=1in]{figs/logo1.eps}
 \vfill
 
 \end{flushright}
@@ -207,7 +160,6 @@ Allen B. Downey\\
 \pagebreak
 \thispagestyle{empty}
 
-{\small
 Copyright \copyright ~2015 Allen B. Downey.
 
 
@@ -220,24 +172,47 @@ Needham MA 02492
 \end{flushleft}
 
 Permission is granted to copy, distribute, and/or modify this document
-under the terms of the Creative Commons Attribution-NonCommercial 3.0 Unported
-License, which is available at \url{http://creativecommons.org/licenses/by-nc/3.0/}.
+under the terms of the Creative Commons
+Attribution-NonCommercial-ShareAlike 4.0 International License, which
+is available at
+\url{http://creativecommons.org/licenses/by-nc-sa/4.0/}.
 
-The original form of this book is \LaTeX\ source code.  Compiling this
-code has the effect of generating a device-independent representation
-of a textbook, which can be converted to other formats and printed.
 
 The \LaTeX\ source for this book is available from
 \url{http://greenteapress.com/thinkos}.
 
-The cover for this book is based on a photo by Paul Friel
-(\url{http://flickr.com/people/frielp/}), who made it available under
-the Creative Commons Attribution license.  The original photo
-is at \url{http://flickr.com/photos/frielp/11999738/}.
-
 \vspace{0.2in}
 
-} % end small
+\end{latexonly}
+
+
+% HTMLONLY
+
+\begin{htmlonly}
+
+% TITLE PAGE FOR HTML VERSION
+
+{\Large \thetitle: \thesubtitle}
+
+{\large Allen B. Downey}
+
+Version \theversion
+
+\vspace{0.25in}
+
+Copyright 2015 Allen B. Downey
+
+\vspace{0.25in}
+
+Permission is granted to copy, distribute, and/or modify this document
+under the terms of the Creative Commons 
+Attribution-NonCommercial-ShareAlike 4.0 International
+Unported License, which is available at
+\url{http://creativecommons.org/licenses/by-nc-sa/4.0/}.
+
+\setcounter{chapter}{-1}
+
+\end{htmlonly}
 
 
 \chapter{Preface}
@@ -4234,7 +4209,7 @@ that implement Pthreads also provide semaphores.
 
 POSIX semaphores have type {\tt sem\_t}.
 As usual, I put a wrapper around {\tt sem\_t}
-to make it safer and easier to use.  My wrapper is in {\tt sem.h}:
+to make it easier to use.  The interface is defined in {\tt sem.h}:
 
 \begin{verbatim}
 typedef sem_t Semaphore;
@@ -4318,8 +4293,6 @@ Using these semaphore wrapper functions, we can
 write a solution to the Producer-Consumer problem from
 Section~\ref{prodcon}.
 The code in this section is in \verb"queue_sem.c".
-
-%TODO: Get this code into ExercisesInC/examples/queue
 
 Here's the new definition of {\tt Queue}, replacing the mutex
 and condition variables with semaphores:
@@ -4407,8 +4380,7 @@ int queue_pop(Queue *queue) {
 This solution is explained, using pseudo-code, in Chapter 4 of
 {\it The Little Book of Semaphores}.
 
-Using the code in the repo for this book, you should be able to compile
-and run this solution.  You should be able to run:
+Using the code in the repository for this book, you should be able to compile and run this solution like this:
 
 \begin{verbatim}
 $ make queue_sem
@@ -4421,14 +4393,12 @@ $ ./queue_sem
 \label{makeyourown}
 
 Any problem that can be solved with semaphores can also be solved
-with condition variables and mutexes.  One way to prove that's true
-is to implement a semaphore using condition variables and mutexes.
+with condition variables and mutexes.  We can prove that's true
+by using condition variables and mutexes to implement a semaphore.
 
 Before you go on, you might want to try this as an exercise: write
 functions that implement the semaphore API in {\tt sem.h}
-using using condition variables and mutexes.  You can put your
-solution in {\tt mysem.c} and {\tt mysem.h} in the repo for this book,
-and you'll find my solution in \verb"mysem_soln.c" and
+using using condition variables and mutexes.  In the repository for this book, you'll find my solution in \verb"mysem_soln.c" and
 \verb"mysem_soln.h".
 
 If you have trouble getting started, you can use the following

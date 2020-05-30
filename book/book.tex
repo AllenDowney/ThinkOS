@@ -3261,7 +3261,7 @@ Within a single process, all threads share the same text segment, so
 they run the same code.  But different threads often run different parts
 of the code.
 
-And they share the same static segment, so if one thread changes a
+And they share the same global segment, so if one thread changes a
 global variable, other threads see the change.  They also share the heap,
 so threads can share dynamically-allocated chunks.
 

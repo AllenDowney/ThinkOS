@@ -32,7 +32,7 @@ typedef struct {
   Mutex *mutex;
 } Shared;
 
-Shared *make_shared(int end)
+Shared *make_shared()
 {
   Shared *shared = check_malloc(sizeof(Shared));
   shared->counter = 0;
@@ -80,7 +80,7 @@ int main()
   int i;
   pthread_t child[NUM_CHILDREN];
 
-  Shared *shared = make_shared(1000000);
+  Shared *shared = make_shared();
 
   for (i=0; i<NUM_CHILDREN; i++) {
     child[i] = make_thread(entry, shared);

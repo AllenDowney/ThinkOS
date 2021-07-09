@@ -3460,7 +3460,7 @@ code that waits on the children:
     }
 \end{verbatim}
 
-This loops waits for the children one at a time in the order they
+This loop waits for the children one at a time in the order they
 were created.  There is no guarantee that the child threads complete 
 in that order, but this loop works correctly even if they don't.  If one
 of the children is late, the loop might have to wait, and other children
